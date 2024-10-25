@@ -34,10 +34,12 @@ node {
             stage('Authorize to Salesforce') {
                 if (isUnix()) {
                     // Unix/Linux-based command
-                    rc = command "sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile C:\openssl\bin\server.key  --username ${HUB_ORG} --setalias chandradev1"
+                    rc = command "sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile C:\\openssl\\bin\\server.key --username ${HUB_ORG} --setalias chandradev1"
+
                 } else {
                     // Windows-based command
-                    rc = command "sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile C:\openssl\bin\server.key  --username ${HUB_ORG} --setalias chandradev1"
+                    rc = command "sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile C:\\openssl\\bin\\server.key --username ${HUB_ORG} --setalias chandradev1"
+
                 }
 
                 if (rc != 0) {

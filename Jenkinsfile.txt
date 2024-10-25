@@ -70,7 +70,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --path force-app/main/default --target-org chandradev1 --wait 10
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir force-app/main/default --target-org chandradev1 --wait 10
                     """
                 }
 

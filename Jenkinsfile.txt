@@ -29,15 +29,15 @@ node {
     // Run all the enclosed stages with access to the Salesforce JWT key credentials.
     withEnv(["HOME=${env.WORKSPACE}"]) {    
         echo "Workspace path is: ${env.WORKSPACE}"
-        withCredentials([file(credentialsId: SERVER_KEY_CREDENTIALS_ID, variable: 'server_key_file')]) {
+        withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
             // Authenticate to Salesforce using the server key.
             stage('Authorize to Salesforce') {
                 if (isUnix()) {
                     // Unix/Linux-based command
-                    rc = command "${toolbelt}/sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias UAT"
+                    rc = command "${toolbelt}/sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile ${JWT_KEY_CRED_ID} --username ${HUB_ORG} --setalias chandradev1"
                 } else {
                     // Windows-based command
-                    rc = command "${toolbelt}\\sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias UAT"
+                    rc = command "${toolbelt}\\sfdx auth:jwt:grant --instanceurl ${SFDC_HOST} --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile ${JWT_KEY_CRED_ID} --username ${HUB_ORG} --setalias chandradev1"
                 }
 
                 if (rc != 0) {
@@ -49,10 +49,10 @@ node {
             stage('Deploy and Run Tests') {
                 if (isUnix()) {
                     // Unix/Linux-based command
-                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
                     // Windows-based command
-                    rc = command "${toolbelt}\\sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                    rc = command "${toolbelt}\\sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 }
 
                 if (rc != 0) {

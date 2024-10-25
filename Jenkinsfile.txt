@@ -70,7 +70,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --wait 10 --deploydir "force-app/main/default" --targetusername chandradev1 --testlevel ${TEST_LEVEL}
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --sourcepath force-app/main/default --target-org chandradev1 --testlevel RunLocalTests --wait 10
                     """
                 }
 

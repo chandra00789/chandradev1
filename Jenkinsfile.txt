@@ -10,7 +10,7 @@ node {
     def CONNECTED_APP_CONSUMER_KEY="3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
     def HUB_ORG="chandradev1@kloudrac.com"
     def JWT_KEY_CRED_ID="1fde5a5a-3987-4fbb-b1a6-a236ee570232"
-    def DEPLOYDIR='force-app\\main\\default'
+    def DEPLOYDIR='force-app/main/default/'
     def TEST_LEVEL='RunLocalTests'
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
 	println 'KEY IS' 
@@ -70,7 +70,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --wait 10  --targetusername chandradev1 --testlevel ${TEST_LEVEL}
                     """
                 }
 

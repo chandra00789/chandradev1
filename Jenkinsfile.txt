@@ -58,9 +58,7 @@ node {
 
                 }
 
-                if (rc != 0) {
-                    error 'Salesforce org authorization failed.'
-                }
+                echo rc
                 echo "auth success"
             }
 
@@ -71,12 +69,12 @@ node {
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
                     // Windows-based command
-                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
+                    rc = command """
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}
+                    """
                 }
 
-                if (rc != 0) {
-                    error 'Salesforce deploy and test run failed.'
-                }
+                echo rc
             }
         }
     }

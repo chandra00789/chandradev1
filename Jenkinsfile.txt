@@ -51,7 +51,7 @@ node {
 
                 } else {
                     // Windows-based command
-                   rc = bat """
+                   rc = command """
     "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
 """
 

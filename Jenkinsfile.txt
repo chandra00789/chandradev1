@@ -21,39 +21,57 @@ node {
 	println env.PATH
 
 
+    def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
+    println env.PATH
+
     def toolbelt = tool 'toolbelt'
-
-
-    // -------------------------------------------------------------------------
-    // Check out code from source control.
-    // -------------------------------------------------------------------------
-
-    stage('checkout source') {
-        // when running in multi-branch job, one must issue this command
-        checkout scm
+    withCredentials([string(credentialsId: GITHUB_TOKEN_CREDENTIALS_ID, variable: 'GITHUB_TOKEN')]) {
+        stage('checkout source') {
+            sh """
+            git config --global credential.helper 'cache --timeout=3600'
+            git config --global user.email "you@example.com"
+            git config --global user.name "Your Name"
+            git clone https://\$GITHUB_TOKEN@github.com/your-repo/your-project.git
+            """
+        }
     }
 
-    withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'jwt_key_file')]) {
-        stage('Deploye Code') {
-            if (isUnix()) {
-                rc = sh returnStatus: true, script: "${toolbelt} force:auth:jwt:grant --clientid ${CONNECTED_APP_CONSUMER_KEY} --username ${HUB_ORG} --jwtkeyfile ${jwt_key_file} --setdefaultdevhubusername --instanceurl ${SFDC_HOST}"
-            }else{
-                 rc = bat returnStatus: true, script: "\"${toolbelt}\" force:auth:jwt:grant --clientid ${CONNECTED_APP_CONSUMER_KEY} --username ${HUB_ORG} --jwtkeyfile \"${jwt_key_file}\" --setdefaultdevhubusername --instanceurl ${SFDC_HOST}"
-            }
-            if (rc != 0) { error 'hub org authorization failed' }
+    withEnv(["HOME=${env.WORKSPACE}"]) {	
+	
+        withCredentials([file(credentialsId: SERVER_KEY_CREDENTIALS_ID, variable: 'server_key_file')]) {
+            // -------------------------------------------------------------------------
+            // Authenticate to Salesforce using the server key.
+            // -------------------------------------------------------------------------
 
-			println rc
-			
-			// need to pull out assigned username
-			if (isUnix()) {
-				rmsg = sh returnStdout: true, script: "${toolbelt} force:mdapi:deploy -d manifest/. -u ${HUB_ORG}"
-			}else{
-			   rmsg = bat returnStdout: true, script: "\"${toolbelt}\" force:mdapi:deploy -d manifest/. -u ${HUB_ORG}"
-			}
-			  
-            printf rmsg
-            println('Hello from a Job DSL script!')
-            println(rmsg)
+            stage('Authorize to Salesforce') {
+                rc = command "${toolbelt}/sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias UAT"
+                if (rc != 0) {
+                    error 'Salesforce org authorization failed.'
+                }
+            }
+
+            // -------------------------------------------------------------------------
+            // Deploy metadata and execute unit tests.
+            // -------------------------------------------------------------------------
+
+            stage('Deploy and Run Tests') {
+                rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                if (rc != 0) {
+                    error 'Salesforce deploy and test run failed.'
+                }
+            }
+
+            // -------------------------------------------------------------------------
+            // Example shows how to run a check-only deploy.
+            // -------------------------------------------------------------------------
+            /*
+            stage('Check Only Deploy') {
+                rc = command "${toolbelt}/sfdx force:mdapi:deploy --checkonly --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                if (rc != 0) {
+                    error 'Salesforce deploy failed.'
+                }
+            }
+            */
         }
     }
 }

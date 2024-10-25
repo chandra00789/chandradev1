@@ -24,50 +24,43 @@ node {
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
 
-    def toolbelt = tool 'toolbelt'
-    withCredentials([string(credentialsId: GITHUB_TOKEN_CREDENTIALS_ID, variable: 'GITHUB_TOKEN')]) {
-        stage('checkout source') {
-            sh """
-            git config --global credential.helper 'cache --timeout=3600'
-            git config --global user.email "you@example.com"
-            git config --global user.name "Your Name"
-            git clone https://\$GITHUB_TOKEN@github.com/your-repo/your-project.git
-            """
-            println('Hello from a checkout source script!')
-        }
+    stage('checkout source') {
+        checkout scm
     }
 
-    withEnv(["HOME=${env.WORKSPACE}"]) {	
-        println('in withenv')
-	
+    // Run all the enclosed stages with access to the Salesforce JWT key credentials.
+    withEnv(["HOME=${env.WORKSPACE}"]) {    
+        echo "Workspace path is: ${env.WORKSPACE}"
         withCredentials([file(credentialsId: SERVER_KEY_CREDENTIALS_ID, variable: 'server_key_file')]) {
-            // -------------------------------------------------------------------------
             // Authenticate to Salesforce using the server key.
-            // -------------------------------------------------------------------------
-            println('in credentials')
             stage('Authorize to Salesforce') {
-                rc = command "${toolbelt}/sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias chandradev1"
+                if (isUnix()) {
+                    // Unix/Linux-based command
+                    rc = command "${toolbelt}/sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias UAT"
+                } else {
+                    // Windows-based command
+                    rc = command "${toolbelt}\\sfdx auth:jwt:grant --instanceurl ${SF_INSTANCE_URL} --clientid ${SF_CONSUMER_KEY} --jwtkeyfile ${server_key_file} --username ${SF_USERNAME} --setalias UAT"
+                }
+
                 if (rc != 0) {
                     error 'Salesforce org authorization failed.'
-                    println('Salesforce org authorization failed.')
                 }
-                println('Salesforce org authorization success')
             }
 
-            // -------------------------------------------------------------------------
             // Deploy metadata and execute unit tests.
-            // -------------------------------------------------------------------------
-
             stage('Deploy and Run Tests') {
-                rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                if (isUnix()) {
+                    // Unix/Linux-based command
+                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                } else {
+                    // Windows-based command
+                    rc = command "${toolbelt}\\sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername UAT --testlevel ${TEST_LEVEL}"
+                }
+
                 if (rc != 0) {
                     error 'Salesforce deploy and test run failed.'
-                    println('Salesforce deploy and test run failed.')
                 }
-                println('Salesforce deploy and test run success')
             }
-
-            
         }
     }
 }

@@ -76,7 +76,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir "D:\\Learning\\chandradev1\\chandradev1\\"  --wait 10 --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start  --wait 10 --json
                     """
                 }
 

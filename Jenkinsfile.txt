@@ -54,11 +54,15 @@ node {
                    rc = command """
     "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
 """
-
+                    echo "Return code: ${rc}"
+                    rc = command """
+                        "C:\\Program Files\\sf\\bin\\sfdx" force:config:set defaultusername=chandradev1
+                    """
 
                 }
 
                 echo "Return code: ${rc}"
+                
                 echo "auth success"
             }
 
@@ -70,7 +74,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir "D:\\Learning\\chandradev1\\chandradev1\\" --target-org "C:\\Users\\Kloudrac\\.sfdx\\chandradev1@kloudrac.com" --wait 10
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir "D:\\Learning\\chandradev1\\chandradev1\\"  --wait 10 --json
                     """
                 }
 

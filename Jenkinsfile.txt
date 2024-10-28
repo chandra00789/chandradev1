@@ -70,7 +70,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir "D:\\Learning\\chandradev1\\chandradev1\\" --target-org 00DdM00000DvDhuUAF --wait 10
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir "D:\\Learning\\chandradev1\\chandradev1\\" --target-org "C:\\Users\\Kloudrac\\.sfdx\\chandradev1" --wait 10
                     """
                 }
 

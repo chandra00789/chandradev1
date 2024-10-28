@@ -58,7 +58,7 @@ node {
 
                 }
 
-                echo rc
+                echo "Return code: ${rc}"
                 echo "auth success"
             }
 
@@ -74,7 +74,7 @@ node {
                     """
                 }
 
-                echo rc
+                echo "Return code: ${rc}"
             }
         }
     }

@@ -1,5 +1,5 @@
 #!groovy
-
+import groovy.json.JsonSlurperClassic
 node {
 
 	def BUILD_NUMBER=env.BUILD_NUMBER
@@ -31,7 +31,9 @@ node {
     // Check out code from source control.
     // -------------------------------------------------------------------------
 
-    
+    stage('checkout source') {
+        checkout scm
+    }
      
 
     

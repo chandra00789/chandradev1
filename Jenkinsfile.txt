@@ -70,18 +70,18 @@ node {
 
             // Deploy metadata and execute unit tests.
             stage('Deploy and Run Tests') {
-                if (isUnix()) {
-                    // Unix/Linux-based command
-                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
-                } else {
-                    // Windows-based command
+                def changedFiles = bat(script: 'git diff --name-only HEAD HEAD~1', returnStdout: true).trim()
+                if (changedFiles) {
+                    echo "Deploying the following changed files: ${changedFiles}"
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start  --wait 10 --json
+                        "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --source-dir ${changedFiles} --wait 10 --json
                     """
+                    echo "Return code: ${rc}"
+                } else {
+                    echo "No changes to deploy."
                 }
-
-                echo "Return code: ${rc}"
             }
+
         }
     }
 }

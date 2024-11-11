@@ -11,7 +11,7 @@ node {
     def HUB_ORG="chandradev1@kloudrac.com"
     def JWT_KEY_CRED_ID="1fde5a5a-3987-4fbb-b1a6-a236ee570232"
     def DEPLOYDIR='force-app/main/default/'
-    def TEST_LEVEL='RunLocalTests'
+    
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
     def TEST_LEVEL = 'RunAllTestsInOrg'
 	println 'KEY IS' 

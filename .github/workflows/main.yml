@@ -1,0 +1,51 @@
+name: "Trigger Jenkins Validation"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  trigger-jenkins:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send PR to Jenkins
+        id: trigger_jenkins
+        env:
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}  # Jenkins URL stored as a GitHub Secret
+          JENKINS_USER: ${{ secrets.JENKINS_USER }} # Jenkins user stored as a GitHub Secret
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }} # Jenkins token stored as a GitHub Secret
+        run: |
+          curl -X POST "${{ env.JENKINS_URL }}/job/YOUR_JOB_NAME/buildWithParameters" \
+            --user "${{ env.JENKINS_USER }}:${{ env.JENKINS_TOKEN }}" \
+            --data-urlencode "PULL_REQUEST_URL=${{ github.event.pull_request.html_url }}" \
+            --data-urlencode "PULL_REQUEST_NUMBER=${{ github.event.pull_request.number }}"
+
+      - name: Wait for Jenkins to Complete
+        run: |
+          # Poll Jenkins to check for job completion
+          # This loop checks the job status every 15 seconds
+          status=""
+          while [ "$status" != "SUCCESS" ]; do
+            status=$(curl -s -u "${{ env.JENKINS_USER }}:${{ env.JENKINS_TOKEN }}" \
+              "${{ env.JENKINS_URL }}/job/YOUR_JOB_NAME/lastBuild/api/json" \
+              | jq -r '.result')
+            if [ "$status" == "FAILURE" ]; then
+              echo "Jenkins build failed"
+              exit 1
+            fi
+            echo "Waiting for Jenkins to complete..."
+            sleep 15
+          done
+
+      - name: Mark as Ready to Merge
+        if: ${{ steps.trigger_jenkins.outcome == 'success' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr_number = context.issue.number;
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number,
+              state: "ready_for_merge" // Custom state to mark it as ready to merge
+            });

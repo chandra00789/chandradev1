@@ -3,6 +3,5 @@ trigger TriggerAccount on Account (before insert) {
     {
         acc.Description = 'from chandradev2';
         
-        
     }
 }

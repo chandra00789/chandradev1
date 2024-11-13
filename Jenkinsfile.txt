@@ -24,7 +24,8 @@ node {
 
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
-
+    def isPullRequest = env.CHANGE_ID != null
+    def isMainBranch = env.BRANCH_NAME == 'main'
     
 
 
@@ -67,6 +68,42 @@ node {
                 echo "Return code: ${rc}"
                 
                 echo "auth success"
+            }
+            if (isPullRequest) {
+                stage('Validate Pull Request') {
+                    echo "Running validation on pull request #${env.CHANGE_ID}"
+                    def validateCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                    --checkonly --source-dir ${env.WORKSPACE}/${DEPLOYDIR} \
+                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10
+                    """
+                    
+                    def rc = command(validateCommand)
+                    echo "Validation return code: ${rc}"
+                    if (rc != 0) {
+                        error "Validation failed for pull request"
+                    }
+                    echo "Validation succeeded"
+                }
+            }
+            
+            // If it's a merge to the main branch, deploy the code
+            if (isMainBranch) {
+                stage('Deploy to Main Branch') {
+                    echo "Deploying to the main branch"
+                    def deployCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                    --source-dir ${env.WORKSPACE}/${DEPLOYDIR} \
+                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10
+                    """
+                    
+                    def rc = command(deployCommand)
+                    echo "Deployment return code: ${rc}"
+                    if (rc != 0) {
+                        error "Deployment failed to main branch"
+                    }
+                    echo "Deployment succeeded"
+                }
             }
 
             // Deploy metadata and execute unit tests.

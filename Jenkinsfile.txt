@@ -77,7 +77,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --checkonly --deploydir ${env.WORKSPACE}\\manifest\\ --wait 10 --testlevel ${TEST_LEVEL} --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --checkonly --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1 --testlevel RunLocalTests  --json
                     """
                 }
 

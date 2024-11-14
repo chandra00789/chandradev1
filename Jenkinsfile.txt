@@ -21,14 +21,11 @@ node {
     println CONNECTED_APP_CONSUMER_KEY
 	println env.PATH
     def toolbelt = tool 'toolbelt'
-	def isPullRequest = env.CHANGE_ID != null
-	println 'is pull request'
-	echo isPullRequest
 
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
-
-    
+	echo env.BRANCH_NAME
+    echo env.BRANCH_NAME.startsWith('PR')
 
 
     // -------------------------------------------------------------------------
@@ -71,7 +68,7 @@ node {
                 
                 echo "auth success"
             }
-		if (isPullRequest) {
+		if (env.BRANCH_NAME.startsWith('PR')) {
 		echo "isPullRequest"
                 stage('Create Package for Pull Request') {
                     echo "Creating package for validation in PR #${env.CHANGE_ID}"

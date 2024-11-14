@@ -25,7 +25,7 @@ node {
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
 	echo env.BRANCH_NAME
-    echo env.BRANCH_NAME.startsWith('PR')
+    
 
 
     // -------------------------------------------------------------------------

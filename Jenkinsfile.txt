@@ -13,7 +13,7 @@ node {
     def DEPLOYDIR='force-app/main/default/'
     
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
-    def TEST_LEVEL = 'RunAllTestsInOrg'
+    def TEST_LEVEL = 'RunLocalTests'
 	println 'KEY IS' 
     println JWT_KEY_CRED_ID
     println HUB_ORG
@@ -21,6 +21,9 @@ node {
     println CONNECTED_APP_CONSUMER_KEY
 	println env.PATH
     def toolbelt = tool 'toolbelt'
+	def isPullRequest = env.CHANGE_ID != null
+	println 'is pull request'
+	echo isPullRequest
 
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
@@ -67,6 +70,33 @@ node {
                 echo "Return code: ${rc}"
                 
                 echo "auth success"
+            }
+		if (isPullRequest) {
+		echo "isPullRequest"
+                stage('Create Package for Pull Request') {
+                    echo "Creating package for validation in PR #${env.CHANGE_ID}"
+
+                    // Identify changed files in the PR and create a package.xml
+                    def changedFiles = sh(script: 'git diff --name-only HEAD~1', returnStdout: true).trim().split('\n')
+                    def packageXmlContent = createPackageXml(changedFiles)
+                    writeFile file: 'package/package.xml', text: packageXmlContent
+
+                    stage('Validate Package') {
+                        def validateCommand = """
+                        "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                        --checkonly --manifest ${env.WORKSPACE}/package/package.xml \
+                        --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
+                        """
+                        def rc = command(validateCommand)
+                        if (rc == 0) {
+                            echo "Package validation succeeded"
+                            // Extract package ID from JSON response (assuming we captured JSON output)
+                            validatedPackageId = extractPackageId('validateOutput.json')
+                        } else {
+                            error "Package validation failed"
+                        }
+                    }
+                }
             }
 
             // Deploy metadata and execute unit tests.

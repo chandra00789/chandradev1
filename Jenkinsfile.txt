@@ -13,7 +13,7 @@ node {
     def DEPLOYDIR='force-app/main/default/'
     
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
-    def TEST_LEVEL = 'RunAllTestsInOrg'
+    def TEST_LEVEL = 'RunLocalTests'
 	println 'KEY IS' 
     println JWT_KEY_CRED_ID
     println HUB_ORG
@@ -24,8 +24,7 @@ node {
 
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
-    def isPullRequest = env.CHANGE_ID != null
-    def isMainBranch = env.BRANCH_NAME == 'main'
+    
     
 
 
@@ -69,57 +68,46 @@ node {
                 
                 echo "auth success"
             }
-            if (isPullRequest) {
-                stage('Validate Pull Request') {
-                    echo "Running validation on pull request #${env.CHANGE_ID}"
-                    def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
-                    --checkonly --source-dir ${env.WORKSPACE}/${DEPLOYDIR} \
-                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10
-                    """
-                    
-                    def rc = command(validateCommand)
-                    echo "Validation return code: ${rc}"
-                    if (rc != 0) {
-                        error "Validation failed for pull request"
-                    }
-                    echo "Validation succeeded"
-                }
-            }
-            
-            // If it's a merge to the main branch, deploy the code
-            if (isMainBranch) {
-                stage('Deploy to Main Branch') {
-                    echo "Deploying to the main branch"
-                    def deployCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
-                    --source-dir ${env.WORKSPACE}/${DEPLOYDIR} \
-                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10
-                    """
-                    
-                    def rc = command(deployCommand)
-                    echo "Deployment return code: ${rc}"
-                    if (rc != 0) {
-                        error "Deployment failed to main branch"
-                    }
-                    echo "Deployment succeeded"
-                }
-            }
+            if (env.BRANCH_NAME.startsWith('PR')) {
+                stage('Create Package for Pull Request') {
+                    echo "Creating package for validation in PR #${env.CHANGE_ID}"
 
-            // Deploy metadata and execute unit tests.
-            stage('Deploy and Run Tests') {
+                    // Identify changed files in the PR and create a package.xml
+                    def changedFiles = sh(script: 'git diff --name-only HEAD~1', returnStdout: true).trim().split('\n')
+                    def packageXmlContent = createPackageXml(changedFiles)
+                    writeFile file: 'package/package.xml', text: packageXmlContent
+
+                    stage('Validate Package') {
+                        def validateCommand = """
+                        "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                        --checkonly --manifest ${env.WORKSPACE}/package/package.xml \
+                        --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
+                        """
+                        def rc = command(validateCommand)
+                        if (rc == 0) {
+                            echo "Package validation succeeded"
+                            // Extract package ID from JSON response (assuming we captured JSON output)
+                            validatedPackageId = extractPackageId('validateOutput.json')
+                        } else {
+                            error "Package validation failed"
+                        }
+                    }
+                }
+            }
+	    else if (env.BRANCH_NAME == 'main') {
+	      stage('Deploy and Run Tests') {
                 if (isUnix()) {
                     // Unix/Linux-based command
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --checkonly --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1 --testlevel RunLocalTests  --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy  --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1   --json
                     """
-		
+			echo "Return code: ${rc}"
                 }
+	    }
 
-                echo "Return code: ${rc}"
             }
         }
     }

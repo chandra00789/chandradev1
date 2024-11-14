@@ -24,7 +24,9 @@ node {
 
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
+
 	echo env.BRANCH_NAME
+
     
 
 
@@ -68,8 +70,12 @@ node {
                 
                 echo "auth success"
             }
+
 		if (env.BRANCH_NAME.startsWith('PR')) {
 		echo "isPullRequest"
+
+            if (env.BRANCH_NAME.startsWith('PR')) {
+
                 stage('Create Package for Pull Request') {
                     echo "Creating package for validation in PR #${env.CHANGE_ID}"
 
@@ -96,19 +102,21 @@ node {
                 }
             }
 
-            // Deploy metadata and execute unit tests.
-            stage('Deploy and Run Tests') {
+	    else if (env.BRANCH_NAME == 'main') {
+	      stage('Deploy and Run Tests') {
+
                 if (isUnix()) {
                     // Unix/Linux-based command
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --checkonly --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1 --testlevel RunLocalTests  --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy  --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1   --json
                     """
+			echo "Return code: ${rc}"
                 }
+	    }
 
-                echo "Return code: ${rc}"
             }
         }
     }

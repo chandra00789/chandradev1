@@ -77,7 +77,7 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --checkonly --source-dir ${env.WORKSPACE} --wait 10 --testlevel ${TEST_LEVEL} --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start --checkonly --deploydir ${env.WORKSPACE}\\manifest\\ --wait 10 --testlevel ${TEST_LEVEL} --json
                     """
                 }
 

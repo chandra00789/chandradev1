@@ -72,36 +72,49 @@ node {
             }
 
 		if (env.BRANCH_NAME.startsWith('PR')) {
-		echo "isPullRequest"
+                echo "isPullRequest"
+                echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
 
-            if (env.BRANCH_NAME.startsWith('PR')) {
+            stage('Create Package for Pull Request') {
+                echo "Creating package for validation in PR #${env.CHANGE_ID}"
 
-                stage('Create Package for Pull Request') {
-                    echo "Creating package for validation in PR #${env.CHANGE_ID}"
+                // Identify changed files in the PR
+                def changedFiles = sh(
+                    script: "git diff --name-only origin/main...${env.BRANCH_NAME}",
+                    returnStdout: true
+                ).trim().split('\n')
 
-                    // Identify changed files in the PR and create a package.xml
-                    def changedFiles = sh(script: 'git diff --name-only HEAD~1', returnStdout: true).trim().split('\n')
-                    def packageXmlContent = createPackageXml(changedFiles)
-                    writeFile file: 'package/package.xml', text: packageXmlContent
+                echo "Changed files: ${changedFiles.join(', ')}"
 
-                    stage('Validate Package') {
-                        def validateCommand = """
-                        "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
-                        --checkonly --manifest ${env.WORKSPACE}/package/package.xml \
-                        --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
-                        """
-                        def rc = command(validateCommand)
-                        if (rc == 0) {
-                            echo "Package validation succeeded"
-                            // Extract package ID from JSON response (assuming we captured JSON output)
-                            validatedPackageId = extractPackageId('validateOutput.json')
-                        } else {
-                            error "Package validation failed"
-                        }
-                    }
-                }
+                // Create the package.xml based on changed files
+                def packageXmlContent = createPackageXml(changedFiles)
+                writeFile file: 'package/package.xml', text: packageXmlContent
+
+                // Debug output of package.xml
+                echo "Generated package.xml:\n${packageXmlContent}"
             }
 
+            stage('Validate Package') {
+                echo "Validating package.xml"
+                try {
+                    // Run Salesforce CLI validation command
+                    def validateCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                    --checkonly --manifest ${env.WORKSPACE}\\package\\package.xml \
+                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
+                    """
+                    def rc = command(validateCommand)
+
+                    if (rc == 0) {
+                        echo "Package validation succeeded"
+                    } else {
+                        error "Package validation failed. Check logs for more details."
+                    }
+                } catch (Exception e) {
+                    error "Validation failed with error: ${e.getMessage()}"
+                }
+            }
+        }
 	    else if (env.BRANCH_NAME == 'main') {
 	      stage('Deploy and Run Tests') {
 
@@ -117,12 +130,11 @@ node {
                 }
 	    }
 
-            }
         }
+        
     }
 }
 }
-
 def command(script) {
     if (isUnix()) {
         return sh(returnStatus: true, script: script);

@@ -78,7 +78,8 @@ node {
             stage('Create Package for Pull Request') {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
                 // Fetch all branches to ensure origin/main exists
-                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin"
+                // Ensure the main branch is fetched
+                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin main:refs/remotes/origin/main"
 
                 // Calculate merge base
                 def mergeBase = bat(

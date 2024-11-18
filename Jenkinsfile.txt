@@ -81,7 +81,7 @@ node {
 
                 // Identify changed files in the PR (Windows-compatible)
                 def changedFiles = bat(
-                    script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only FETCH_HEAD $(git merge-base FETCH_HEAD main)",
+                    script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only FETCH_HEAD ${C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe merge-base FETCH_HEAD main}",
                     returnStdout: true
                 ).trim().split('\n')
 

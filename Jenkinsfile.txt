@@ -77,14 +77,22 @@ node {
 
             stage('Create Package for Pull Request') {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
-                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin main:main"
+                // Fetch all branches to ensure origin/main exists
+                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin"
 
-                // Identify changed files in the PR (Windows-compatible)
+                // Calculate merge base
+                def mergeBase = bat(
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe merge-base FETCH_HEAD origin/main""",
+                    returnStdout: true
+                ).trim()
+
+                echo "Merge base: ${mergeBase}"
+
+                // List changed files
                 def changedFiles = bat(
-                    script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only origin/main...HEAD",
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only ${mergeBase} FETCH_HEAD""",
                     returnStdout: true
                 ).trim().split('\n')
-
                 echo "Changed files: ${changedFiles.join(', ')}"
 
                 // Create the package.xml based on changed files

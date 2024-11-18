@@ -77,10 +77,11 @@ node {
 
             stage('Create Package for Pull Request') {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
+                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin main:main"
 
                 // Identify changed files in the PR (Windows-compatible)
                 def changedFiles = bat(
-                    script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only main...${env.BRANCH_NAME}",
+                    script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only origin/main...${env.BRANCH_NAME}",
                     returnStdout: true
                 ).trim().split('\n')
 

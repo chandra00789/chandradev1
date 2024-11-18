@@ -78,8 +78,8 @@ node {
             stage('Create Package for Pull Request') {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
 
-                // Identify changed files in the PR
-                def changedFiles = sh(
+                // Identify changed files in the PR (Windows-compatible)
+                def changedFiles = bat(
                     script: "git diff --name-only origin/main...${env.BRANCH_NAME}",
                     returnStdout: true
                 ).trim().split('\n')
@@ -93,6 +93,7 @@ node {
                 // Debug output of package.xml
                 echo "Generated package.xml:\n${packageXmlContent}"
             }
+
 
             stage('Validate Package') {
                 echo "Validating package.xml"

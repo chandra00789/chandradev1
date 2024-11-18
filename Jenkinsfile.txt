@@ -79,19 +79,10 @@ node {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
                 // Fetch all branches to ensure origin/main exists
                 // Ensure the main branch is fetched
-                bat "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe fetch origin main:refs/remotes/origin/main"
-
-                // Calculate merge base
-                def mergeBase = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe merge-base FETCH_HEAD origin/main""",
-                    returnStdout: true
-                ).trim()
-
-                echo "Merge base: ${mergeBase}"
-
+                
                 // List changed files
                 def changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only ${mergeBase} FETCH_HEAD""",
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only main""",
                     returnStdout: true
                 ).trim().split('\n')
                 echo "Changed files: ${changedFiles.join(', ')}"

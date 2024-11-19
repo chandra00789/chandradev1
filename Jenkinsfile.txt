@@ -38,10 +38,10 @@ node {
 }
     stage('checkout source') {
         checkout scm
-	 changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch""",
-                    returnStdout: true
-                )
+	 rc1 = command """
+C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch
+"""
+                    
 
 	def changedFiles = bat(
                     script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",

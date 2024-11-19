@@ -33,7 +33,9 @@ node {
     // -------------------------------------------------------------------------
     // Check out code from source control.
     // -------------------------------------------------------------------------
-
+	stage('Cleanup Workspace') {
+    cleanWs()
+}
     stage('checkout source') {
         checkout scm
     }

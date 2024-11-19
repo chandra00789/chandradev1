@@ -84,7 +84,7 @@ node {
                 
                 // List changed files
                 def changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\cmd\\git.exe diff --name-only main""",
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",
                     returnStdout: true
                 ).trim().split('\n')
                 echo "Changed files: ${changedFiles.join(', ')}"

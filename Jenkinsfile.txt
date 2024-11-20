@@ -107,11 +107,7 @@ node {
                 return
             }
 
-            // Step 3: Generate package.xml
-            def packageXmlContent = createPackageXml(salesforceFiles)
-            writeFile file: 'package/package.xml', text: packageXmlContent
-            echo "Generated package.xml:\n${packageXmlContent}"
-            echo "Generated package.xml:\n${packageXmlContent}"
+            
             }
 
 

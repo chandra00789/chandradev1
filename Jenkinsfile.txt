@@ -116,7 +116,7 @@ node {
                 try {
                     // Run Salesforce CLI validation command
                     def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy
                     --checkonly -p "${salesforceFiles.join(',')}"
                     --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
                     """

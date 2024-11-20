@@ -37,11 +37,13 @@ node {
     cleanWs()
 }
     stage('checkout source') {
-        checkout scm
-	 rc1 = command """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch
+        
+rc1 = command """
+C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe clone ${scm}
 """
-                    
+rc0 = command """
+C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe init
+"""
 
 	def changedFiles = bat(
                     script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",

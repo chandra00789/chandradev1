@@ -21,7 +21,7 @@ node {
     println CONNECTED_APP_CONSUMER_KEY
 	println env.PATH
     def toolbelt = tool 'toolbelt'
-
+    def changedFiles
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
 
@@ -46,7 +46,7 @@ node {
 
 // Return to SandBranch
     bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
-	def changedFiles = bat(
+	changedFiles = bat(
                     script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-status main""",
                     returnStdout: true
                 ).trim().split('\n')

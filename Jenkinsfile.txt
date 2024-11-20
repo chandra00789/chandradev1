@@ -117,8 +117,8 @@ node {
                     "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
                     """
                     def rc = command(validateCommand)
-		echo rc
-                    if (rc == 0) {
+		echo ${rc}
+                    if (${rc} == 0) {
                         echo "Package validation succeeded"
                     } else {
                         error "Package validation failed. Check logs for more details."

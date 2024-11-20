@@ -25,7 +25,7 @@ node {
     def salesforceFiles
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
-
+    def execute =true 
 	echo env.BRANCH_NAME
 
     
@@ -115,6 +115,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 
             if (salesforceFiles.isEmpty()) {
                 echo "No Salesforce metadata files to deploy."
+		execute=false
                 return
             }
             }
@@ -122,7 +123,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 
             
 
-		if (env.BRANCH_NAME.startsWith('PR')) {
+		if (env.BRANCH_NAME.startsWith('PR') && execute) {
                 echo "isPullRequest"
                 echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
 		stage('Validate Package') {
@@ -145,7 +146,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                 }
             }
         }
-	    else if (env.BRANCH_NAME == 'main') {
+	    else if (env.BRANCH_NAME == 'main' && execute) {
 	      stage('Deploy and Run Tests') {
 
                 if (isUnix()) {

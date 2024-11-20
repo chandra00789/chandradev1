@@ -106,35 +106,6 @@ node {
                 echo "No Salesforce metadata files to deploy."
                 return
             }
-		// Step 2: Create a Temporary Folder for Deployment
-		    // Step 2: Copy Files to a Temporary Folder for Deployment
-			    def packageDir = "${env.WORKSPACE}/package"
-			
-			    // Create the directory using shell commands
-			    if (isUnix()) {
-			        sh "mkdir -p ${packageDir}"
-			    } else {
-			        bat "mkdir ${packageDir}"
-			    }
-			
-			    // Copy each file to the package directory
-			    salesforceFiles.each { file ->
-			        def sourceFile = "${env.WORKSPACE}/${file}"
-			        def targetFile = "${packageDir}/${file}"
-			
-			        if (isUnix()) {
-			            sh "mkdir -p $(dirname ${targetFile}) && cp ${sourceFile} ${targetFile}"
-			        } else {
-			            bat "mkdir ${targetFile.substring(0, targetFile.lastIndexOf('\\'))} && copy ${sourceFile} ${targetFile}"
-			        }
-			    }
-			
-			    // Generate `package.xml`
-			    def packageXmlContent = generatePackageXml(salesforceFiles)
-			    writeFile file: "${packageDir}/package.xml", text: packageXmlContent
-			
-			    echo "Generated package.xml:\n${packageXmlContent}"
-            
             }
 
 
@@ -148,7 +119,7 @@ node {
                     --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
                     """
                     def rc = command(validateCommand)
-
+		echo rc
                     if (rc == 0) {
                         echo "Package validation succeeded"
                     } else {
@@ -168,7 +139,9 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy  --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1   --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy
+                     -p "${salesforceFiles.join(',')}"
+                    --targetusername chandradev1  --wait 10 --json
                     """
 			echo "Return code: ${rc}"
                 }
@@ -186,45 +159,3 @@ def command(script) {
 		return bat(returnStatus: true, script: script);
     }
 }
-def generatePackageXml(salesforceFiles) {
-    def metadataMap = [:]
-
-    // Map each file to its corresponding Salesforce metadata type
-    salesforceFiles.each { file ->
-        def metadataType = getMetadataType(file)
-        if (metadataType) {
-            metadataMap.putIfAbsent(metadataType, [])
-            metadataMap[metadataType] << file.tokenize('/').last().split('\\.')[0] // Add file name without extension
-        }
-    }
-
-    // Construct XML structure
-    def xmlBuilder = new StringBuilder()
-    xmlBuilder.append('<?xml version="1.0" encoding="UTF-8"?>\n')
-    xmlBuilder.append('<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n')
-
-    metadataMap.each { metadataType, members ->
-        xmlBuilder.append("  <types>\n")
-        members.unique().each { member ->
-            xmlBuilder.append("    <members>${member}</members>\n")
-        }
-        xmlBuilder.append("    <name>${metadataType}</name>\n")
-        xmlBuilder.append("  </types>\n")
-    }
-
-    xmlBuilder.append('  <version>57.0</version>\n') // Update the version as required
-    xmlBuilder.append('</Package>\n')
-
-    return xmlBuilder.toString()
-}
-
-def getMetadataType(filePath) {
-    if (filePath.endsWith('.cls')) return 'ApexClass'
-    if (filePath.endsWith('.trigger')) return 'ApexTrigger'
-    if (filePath.endsWith('.page')) return 'ApexPage'
-    if (filePath.endsWith('.component')) return 'ApexComponent'
-    if (filePath.endsWith('.xml')) return 'CustomObject' // Simplify for Custom Objects
-    // Add more mappings as needed
-    return null
-}
-

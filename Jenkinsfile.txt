@@ -43,6 +43,9 @@ node {
     
     // Check if the main branch is present locally
     bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout main""")
+
+// Return to SandBranch
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
 	def changedFiles = bat(
                     script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-status main""",
                     returnStdout: true

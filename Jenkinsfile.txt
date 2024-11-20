@@ -37,10 +37,8 @@ node {
     cleanWs()
 }
     stage('checkout source') {
-	steps {
                 checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
                 command "ls -lart ./*"
-            }
 
 
 	def changedFiles = bat(

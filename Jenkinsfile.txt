@@ -54,20 +54,21 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                 ).trim().split('\n')
                 echo "Changed files: ${changedFiles.join(', ')}"
     }
+	else if(env.BRANCH_NAME == 'main')
+	{
+	checkout scm
+	
+	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
+		changedFiles = bat(
+	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD^ HEAD""",
+	                    returnStdout: true
+	                ).trim().split('\n')
+	                echo "Changed files: ${changedFiles.join(', ')}"
+	
+	
+	}
 }
-else if(env.BRANCH_NAME == 'main')
-{
-checkout scm
 
-bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
-	changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD^ HEAD""",
-                    returnStdout: true
-                ).trim().split('\n')
-                echo "Changed files: ${changedFiles.join(', ')}"
-    }
-
-}
      
 
     

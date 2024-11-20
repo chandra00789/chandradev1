@@ -21,7 +21,8 @@ node {
     println CONNECTED_APP_CONSUMER_KEY
 	println env.PATH
     def toolbelt = tool 'toolbelt'
-
+    def changedFiles
+    def salesforceFiles
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
 
@@ -33,9 +34,24 @@ node {
     // -------------------------------------------------------------------------
     // Check out code from source control.
     // -------------------------------------------------------------------------
-
+	stage('Cleanup Workspace') {
+    cleanWs()
+}
     stage('checkout source') {
-        checkout scm
+    checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+	// Fetch the main branch explicitly
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
+    
+    // Check if the main branch is present locally
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout main""")
+
+// Return to SandBranch
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
+	changedFiles = bat(
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-status main""",
+                    returnStdout: true
+                ).trim().split('\n')
+                echo "Changed files: ${changedFiles.join(', ')}"
     }
      
 
@@ -70,41 +86,39 @@ node {
                 
                 echo "auth success"
             }
+	 stage('Create Package for Pull Request') {
+                echo "Creating package for validation in PR #${env.CHANGE_ID}"
+                // Step 2: Filter Salesforce Metadata Files
+            salesforceFiles = changedFiles.findAll { line ->
+                def filePath = line.split('\\s+')[1] // Extract file path
+                filePath.startsWith('force-app') // Add other metadata extensions as needed
+            }.collect { line ->
+                line.split('\\s+')[1] // Extract file path
+            }
+            echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
+
+            if (salesforceFiles.isEmpty()) {
+                echo "No Salesforce metadata files to deploy."
+                return
+            }
+            }
+
+
+            
 
 		if (env.BRANCH_NAME.startsWith('PR')) {
                 echo "isPullRequest"
                 echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
-
-            stage('Create Package for Pull Request') {
-                echo "Creating package for validation in PR #${env.CHANGE_ID}"
-
-                // Identify changed files in the PR
-                def changedFiles = sh(
-                    script: "git diff --name-only origin/main...${env.BRANCH_NAME}",
-                    returnStdout: true
-                ).trim().split('\n')
-
-                echo "Changed files: ${changedFiles.join(', ')}"
-
-                // Create the package.xml based on changed files
-                def packageXmlContent = createPackageXml(changedFiles)
-                writeFile file: 'package/package.xml', text: packageXmlContent
-
-                // Debug output of package.xml
-                echo "Generated package.xml:\n${packageXmlContent}"
-            }
-
-            stage('Validate Package') {
+		stage('Validate Package') {
                 echo "Validating package.xml"
                 try {
                     // Run Salesforce CLI validation command
                     def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" project deploy start \
-                    --checkonly --manifest ${env.WORKSPACE}\\package\\package.xml \
-                    --targetusername chandradev1 --testlevel ${TEST_LEVEL} --wait 10 --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
                     """
                     def rc = command(validateCommand)
-
+		echo "Return code: ${rc}"
+		println "Hello hiiidfjsdf sjdfdsj"
                     if (rc == 0) {
                         echo "Package validation succeeded"
                     } else {
@@ -124,7 +138,9 @@ node {
                 } else {
                     // Windows-based command
                     rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy  --wait 10 --deploydir ${env.WORKSPACE}\\manifest\\  --targetusername chandradev1   --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy
+                     -p "${salesforceFiles.join(',')}"
+                    --targetusername chandradev1  --wait 10 --json
                     """
 			echo "Return code: ${rc}"
                 }
@@ -142,4 +158,3 @@ def command(script) {
 		return bat(returnStatus: true, script: script);
     }
 }
-

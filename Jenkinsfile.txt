@@ -25,7 +25,7 @@ node {
     def salesforceFiles
     def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
     println env.PATH
-
+    def execute =true 
 	echo env.BRANCH_NAME
 
     
@@ -38,6 +38,7 @@ node {
     cleanWs()
 }
     stage('checkout source') {
+if (env.BRANCH_NAME.startsWith('PR')) {
     checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
 	// Fetch the main branch explicitly
     bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
@@ -53,6 +54,21 @@ node {
                 ).trim().split('\n')
                 echo "Changed files: ${changedFiles.join(', ')}"
     }
+	else if(env.BRANCH_NAME == 'main')
+	{
+	checkout scm
+	
+	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
+		changedFiles = bat(
+	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD^ HEAD""",
+	                    returnStdout: true
+	                ).trim().split('\n')
+	                echo "Changed files: ${changedFiles.join(', ')}"
+	
+	
+	}
+}
+
      
 
     
@@ -99,6 +115,7 @@ node {
 
             if (salesforceFiles.isEmpty()) {
                 echo "No Salesforce metadata files to deploy."
+		execute=false
                 return
             }
             }
@@ -106,7 +123,7 @@ node {
 
             
 
-		if (env.BRANCH_NAME.startsWith('PR')) {
+		if (env.BRANCH_NAME.startsWith('PR') && execute) {
                 echo "isPullRequest"
                 echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
 		stage('Validate Package') {
@@ -129,7 +146,7 @@ node {
                 }
             }
         }
-	    else if (env.BRANCH_NAME == 'main') {
+	    else if (env.BRANCH_NAME == 'main' && execute) {
 	      stage('Deploy and Run Tests') {
 
                 if (isUnix()) {

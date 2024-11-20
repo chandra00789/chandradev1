@@ -153,12 +153,11 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
                     // Windows-based command
-                    rc = command """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy
-                     -p "${salesforceFiles.join(',')}"
-                    --targetusername chandradev1  --wait 10 --json
+                    def validateCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy  -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
                     """
-			echo "Return code: ${rc}"
+                    def rc = command(validateCommand)
+		echo "Return code: ${rc}"
                 }
 	    }
 

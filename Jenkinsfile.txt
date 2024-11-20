@@ -37,13 +37,11 @@ node {
     cleanWs()
 }
     stage('checkout source') {
-        
-rc1 = command """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe clone ${scm}
-"""
-rc0 = command """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe init
-"""
+	steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+                command "ls -lart ./*"
+            }
+
 
 	def changedFiles = bat(
                     script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",

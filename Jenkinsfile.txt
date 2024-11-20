@@ -60,7 +60,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	// Fetch the main branch explicitly
     bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
 		changedFiles = bat(
-	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD^ HEAD""",
+	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only FETCH_HEAD^ FETCH_HEAD""",
 	                    returnStdout: true
 	                ).trim().split('\n')
 	                echo "Changed files: ${changedFiles.join(', ')}"

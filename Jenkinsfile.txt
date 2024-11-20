@@ -56,9 +56,9 @@ if (env.BRANCH_NAME.startsWith('PR')) {
     }
 	else if(env.BRANCH_NAME == 'main')
 	{
-	checkout scm
-	
-	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
+	checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+	// Fetch the main branch explicitly
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
 		changedFiles = bat(
 	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD^ HEAD""",
 	                    returnStdout: true

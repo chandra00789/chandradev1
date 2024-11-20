@@ -119,7 +119,7 @@ node {
                     def rc = command(validateCommand)
 		echo "Return code: ${rc}"
 		println "Hello hiiidfjsdf sjdfdsj"
-                    if (${rc.success}) {
+                    if (${rc}==0) {
                         echo "Package validation succeeded"
                     } else {
                         error "Package validation failed. Check logs for more details."

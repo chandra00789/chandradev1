@@ -6,7 +6,6 @@ public class TriggerAccountTest {
     {
         Account acc1=new Account();
         acc1.Name='Test';
-        
         insert acc1;
     }
 

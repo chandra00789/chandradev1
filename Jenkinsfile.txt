@@ -106,7 +106,24 @@ node {
                 echo "No Salesforce metadata files to deploy."
                 return
             }
-
+		// Step 2: Create a Temporary Folder for Deployment
+		    def packageDir = "${env.WORKSPACE}/package"
+		    new File(packageDir).mkdirs()
+		
+		    // Copy all Salesforce files to the package directory
+		    salesforceFiles.each { file ->
+		        def sourceFile = new File("${env.WORKSPACE}/${file}")
+		        def targetFile = new File("${packageDir}/${file}")
+		        targetFile.parentFile.mkdirs() // Ensure parent directories exist
+		        sourceFile.renameTo(targetFile) // Move file to the package directory
+		    }
+		
+		    // Step 3: Generate `package.xml` Manifest
+		    def packageXmlContent = generatePackageXml(salesforceFiles)
+		    writeFile file: "${packageDir}/package.xml", text: packageXmlContent
+		
+		    // Debug output of package.xml
+		    echo "Generated package.xml:\n${packageXmlContent}"
             
             }
 
@@ -158,5 +175,46 @@ def command(script) {
     } else {
 		return bat(returnStatus: true, script: script);
     }
+}
+def generatePackageXml(salesforceFiles) {
+    def metadataMap = [:]
+
+    // Map each file to its corresponding Salesforce metadata type
+    salesforceFiles.each { file ->
+        def metadataType = getMetadataType(file)
+        if (metadataType) {
+            metadataMap.putIfAbsent(metadataType, [])
+            metadataMap[metadataType] << file.tokenize('/').last().split('\\.')[0] // Add file name without extension
+        }
+    }
+
+    // Construct XML structure
+    def xmlBuilder = new StringBuilder()
+    xmlBuilder.append('<?xml version="1.0" encoding="UTF-8"?>\n')
+    xmlBuilder.append('<Package xmlns="http://soap.sforce.com/2006/04/metadata">\n')
+
+    metadataMap.each { metadataType, members ->
+        xmlBuilder.append("  <types>\n")
+        members.unique().each { member ->
+            xmlBuilder.append("    <members>${member}</members>\n")
+        }
+        xmlBuilder.append("    <name>${metadataType}</name>\n")
+        xmlBuilder.append("  </types>\n")
+    }
+
+    xmlBuilder.append('  <version>57.0</version>\n') // Update the version as required
+    xmlBuilder.append('</Package>\n')
+
+    return xmlBuilder.toString()
+}
+
+def getMetadataType(filePath) {
+    if (filePath.endsWith('.cls')) return 'ApexClass'
+    if (filePath.endsWith('.trigger')) return 'ApexTrigger'
+    if (filePath.endsWith('.page')) return 'ApexPage'
+    if (filePath.endsWith('.component')) return 'ApexComponent'
+    if (filePath.endsWith('.xml')) return 'CustomObject' // Simplify for Custom Objects
+    // Add more mappings as needed
+    return null
 }
 

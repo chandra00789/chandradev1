@@ -107,23 +107,33 @@ node {
                 return
             }
 		// Step 2: Create a Temporary Folder for Deployment
-		    def packageDir = "${env.WORKSPACE}/package"
-		    new File(packageDir).mkdirs()
-		
-		    // Copy all Salesforce files to the package directory
-		    salesforceFiles.each { file ->
-		        def sourceFile = new File("${env.WORKSPACE}/${file}")
-		        def targetFile = new File("${packageDir}/${file}")
-		        targetFile.parentFile.mkdirs() // Ensure parent directories exist
-		        sourceFile.renameTo(targetFile) // Move file to the package directory
-		    }
-		
-		    // Step 3: Generate `package.xml` Manifest
-		    def packageXmlContent = generatePackageXml(salesforceFiles)
-		    writeFile file: "${packageDir}/package.xml", text: packageXmlContent
-		
-		    // Debug output of package.xml
-		    echo "Generated package.xml:\n${packageXmlContent}"
+		    // Step 2: Copy Files to a Temporary Folder for Deployment
+			    def packageDir = "${env.WORKSPACE}/package"
+			
+			    // Create the directory using shell commands
+			    if (isUnix()) {
+			        sh "mkdir -p ${packageDir}"
+			    } else {
+			        bat "mkdir ${packageDir}"
+			    }
+			
+			    // Copy each file to the package directory
+			    salesforceFiles.each { file ->
+			        def sourceFile = "${env.WORKSPACE}/${file}"
+			        def targetFile = "${packageDir}/${file}"
+			
+			        if (isUnix()) {
+			            sh "mkdir -p $(dirname ${targetFile}) && cp ${sourceFile} ${targetFile}"
+			        } else {
+			            bat "mkdir ${targetFile.substring(0, targetFile.lastIndexOf('\\'))} && copy ${sourceFile} ${targetFile}"
+			        }
+			    }
+			
+			    // Generate `package.xml`
+			    def packageXmlContent = generatePackageXml(salesforceFiles)
+			    writeFile file: "${packageDir}/package.xml", text: packageXmlContent
+			
+			    echo "Generated package.xml:\n${packageXmlContent}"
             
             }
 

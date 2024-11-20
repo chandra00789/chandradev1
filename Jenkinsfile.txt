@@ -57,12 +57,14 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	else if(env.BRANCH_NAME == 'main')
 	{
 	checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-	// Fetch the main branch explicitly
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
-		changedFiles = bat(
-	                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main^ main""",
-	                    returnStdout: true
-	                ).trim().split('\n')
+	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
+        bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout -B main origin/main""")
+
+        // Identify all changes since the last successful deployment
+        changedFiles = bat(
+            script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD~1 main""",
+            returnStdout: true
+        ).trim().split('\n')
 	                echo "Changed files: ${changedFiles.join(', ')}"
 	
 	
@@ -105,12 +107,9 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	 stage('Create Package for Pull Request') {
                 echo "Creating package for validation in PR #${env.CHANGE_ID}"
                 // Step 2: Filter Salesforce Metadata Files
-            salesforceFiles = changedFiles.findAll { line ->
-                def filePath = line.split('\\s+')[1] // Extract file path
-                filePath.startsWith('force-app') // Add other metadata extensions as needed
-            }.collect { line ->
-                line.split('\\s+')[1] // Extract file path
-            }
+            salesforceFiles = changedFiles.findAll { filePath ->
+		    filePath.contains('force-app')
+		}
             echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
 
             if (salesforceFiles.isEmpty()) {

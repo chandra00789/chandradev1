@@ -1,7 +1,7 @@
-- name: Trigger jenkins job
+name: Trigger jenkins job
   branding:
-  icon: 'terminal'
-  color: 'green'
+    icon: 'terminal'
+    color: 'green'
   uses: jabbukka/jenkins-trigger@main
   with:
     url: 'https://e115-2405-201-402e-a021-1080-420b-cfb8-b637.ngrok-free.app/'

@@ -28,7 +28,7 @@ node {
     def execute =true 
 	echo env.BRANCH_NAME
 
-    
+    echo "Hello"
 
 
     // -------------------------------------------------------------------------

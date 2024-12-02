@@ -184,13 +184,20 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        def jsonOutput = rawOutput.substring(jsonStart, jsonEnd + 1)
 		        echo "Extracted JSON: ${jsonOutput}"
 		        def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
-		        
-		        if (deploymentInfo.status == 'Succeeded') {
-		            echo "Package validation succeeded."
+		
+		        // Log warnings
+		        if (deploymentInfo.warnings?.size() > 0) {
+		            echo "Warnings: ${deploymentInfo.warnings}"
+		        }
+		
+		        // Validate deployment status
+		        if (deploymentInfo.status == 'Succeeded' && deploymentInfo.success == true) {
+		            echo "Validation succeeded."
 		            env.DEPLOYMENT_ID = deploymentInfo.result.id
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
 		        } else {
-		            error "Validation failed. Check logs for details."
+			echo "Validation failed. JSON status: ${deploymentInfo.status}, success: ${deploymentInfo.success}"
+		            error "Validation failed. JSON status: ${deploymentInfo.status}, success: ${deploymentInfo.success}"
 		        }
 		    } else {
 		        error "Failed to extract JSON from the output."

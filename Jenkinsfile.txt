@@ -1,4 +1,3 @@
-#!groovy
 import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
@@ -14,243 +13,118 @@ node {
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
-	def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
+        def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
 
-	if (triggerCause) {
-	    echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
-	         "\"${triggerCause.comment}\", which matches the " +
-	         "\"${triggerCause.triggerPattern}\" trigger pattern.")
-	} else {
-	    echo('Build was not started by a trigger')
-	}
-        // Echo the payload
-        echo "Payload: ${payload}"
+        if (triggerCause) {
+            echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
+                 "\"${triggerCause.comment}\", which matches the " +
+                 "\"${triggerCause.triggerPattern}\" trigger pattern.")
+        } else {
+            echo('Build was not started by a comment trigger.')
+            // Add a comment to notify the user how to trigger builds with test classes
+            echo 'Adding comment to the PR.'
+            // Use GitHub CLI or a Jenkins plugin to add a comment
+            // Example GitHub CLI command: gh issue comment $PR_NUMBER --body "To test Classes Write 'test this please.' followed by comma separated test class names."
+            return // Stop execution here
+        }
 
-        // Optional: Debugging currentBuild as a string
-        echo "Current build: ${currentBuild.toString()}"
+        // Extract test class names from the comment
+        def commentText = triggerCause.comment
+        def match = (commentText =~ /test this please\.(.*)/)
+        if (!match) {
+            error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
+        }
+        def testClasses = match[0][1].trim().split(/\s*,\s*/)
+        echo "Extracted test classes: ${testClasses.join(', ')}"
+
+        // Store test classes to be used later
+        env.TEST_CLASSES = testClasses.join(',')
     }
 }
+
 node {
-
-	def BUILD_NUMBER=env.BUILD_NUMBER
-    def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
+    def BUILD_NUMBER = env.BUILD_NUMBER
+    def RUN_ARTIFACT_DIR = "tests/${BUILD_NUMBER}"
     def SFDC_USERNAME
-
-	
-    def CONNECTED_APP_CONSUMER_KEY="3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
-    def HUB_ORG="chandradev1@kloudrac.com"
-    def JWT_KEY_CRED_ID="1fde5a5a-3987-4fbb-b1a6-a236ee570232"
-    def DEPLOYDIR='force-app/main/default/'
-    
+    def CONNECTED_APP_CONSUMER_KEY = "3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
+    def HUB_ORG = "chandradev1@kloudrac.com"
+    def JWT_KEY_CRED_ID = "1fde5a5a-3987-4fbb-b1a6-a236ee570232"
+    def DEPLOYDIR = 'force-app/main/default/'
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
-    def TEST_LEVEL = 'RunLocalTests'
-	println 'KEY IS' 
-    println JWT_KEY_CRED_ID
-    println HUB_ORG
-    println SFDC_HOST
-    println CONNECTED_APP_CONSUMER_KEY
-	println env.PATH
+    def TEST_LEVEL = 'RunSpecifiedTests'
     def toolbelt = tool 'toolbelt'
     def changedFiles
     def salesforceFiles
-    def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
-    println env.PATH
-    def execute =true 
-	echo env.BRANCH_NAME
+    def execute = true
 
-    echo "Hello"
-
-
-    // -------------------------------------------------------------------------
-    // Check out code from source control.
-    // -------------------------------------------------------------------------
-	stage('Cleanup Workspace') {
-    cleanWs()
-}
-    stage('checkout source') {
-if (env.BRANCH_NAME.startsWith('PR')) {
-    checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-	// Fetch the main branch explicitly
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
-    
-    // Check if the main branch is present locally
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout main""")
-
-// Return to SandBranch
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
-	changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",
-                    returnStdout: true
-                ).trim().split('\n')
-                echo "Changed files: ${changedFiles.join(', ')}"
+    stage('Cleanup Workspace') {
+        cleanWs()
     }
-	else if(env.BRANCH_NAME == 'main')
-	{
-	checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
-        bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout -B main origin/main""")
 
-        // Identify all changes since the last successful deployment
-        changedFiles = bat(
-            script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD~1 main""",
-            returnStdout: true
-        ).trim().split('\n')
-	                echo "Changed files: ${changedFiles.join(', ')}"
-	
-	
-	}
-}
+    stage('Checkout Source') {
+        if (env.BRANCH_NAME.startsWith('PR')) {
+            checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+            bat(script: """git fetch origin main""")
+            bat(script: """git checkout main""")
+            bat(script: """git checkout SandBranch""")
+            changedFiles = bat(
+                script: """git diff --name-only main""",
+                returnStdout: true
+            ).trim().split('\n')
+            echo "Changed files: ${changedFiles.join(', ')}"
+        } else if (env.BRANCH_NAME == 'main') {
+            checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+            bat(script: """git fetch origin main""")
+            bat(script: """git checkout -B main origin/main""")
+            changedFiles = bat(
+                script: """git diff --name-only HEAD~1 main""",
+                returnStdout: true
+            ).trim().split('\n')
+            echo "Changed files: ${changedFiles.join(', ')}"
+        }
+    }
 
-     
+    stage('Create Package for Pull Request') {
+        salesforceFiles = changedFiles.findAll { filePath ->
+            filePath.contains('force-app')
+        }
+        echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
 
-    
+        if (salesforceFiles.isEmpty()) {
+            echo "No Salesforce metadata files to deploy."
+            execute = false
+        }
+    }
 
-    // Run all the enclosed stages with access to the Salesforce JWT key credentials.
-    withEnv(["HOME=${env.WORKSPACE}"]) {    
-        echo "Workspace path is: ${env.WORKSPACE}"
-        withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
-            // Authenticate to Salesforce using the server key.
-            stage('Authorize to Salesforce') {
-                if (isUnix()) {
-                    // Unix/Linux-based command
-                    rc = sh """
-    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
-"""
-
-
-                } else {
-                    // Windows-based command
-                   rc = command """
-    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
-"""
-                    echo "Return code: ${rc}"
-                    rc = command """
-                        "C:\\Program Files\\sf\\bin\\sfdx" force:config:set defaultusername=chandradev1
-                    """
-
-                }
-
-                echo "Return code: ${rc}"
-                
-                echo "auth success"
-            }
-	 stage('Create Package for Pull Request') {
-                echo "Creating package for validation in PR #${env.CHANGE_ID}"
-                // Step 2: Filter Salesforce Metadata Files
-            salesforceFiles = changedFiles.findAll { filePath ->
-		    filePath.contains('force-app')
-		}
-            echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
-
-            if (salesforceFiles.isEmpty()) {
-                echo "No Salesforce metadata files to deploy."
-		execute=false
-                return
-            }
-            }
-
-
-            
-
-		if (env.BRANCH_NAME.startsWith('PR') && execute) {
-                echo "isPullRequest"
-                echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
-		stage('Validate Package') {
-                echo "Validating package.xml"
-                try {
-                    // Run Salesforce CLI validation command
-                    def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
-                    """
-                    def rc = command(validateCommand)
-		echo "Return code: ${rc}"
-		println "Hello hiiidfjsdf sjdfdsj"
-                    if (rc == 0) {
-                        echo "Package validation succeeded"
-                    } else {
-                        error "Package validation failed. Check logs for more details."
+    if (execute) {
+        withEnv(["HOME=${env.WORKSPACE}"]) {
+            echo "Workspace path is: ${env.WORKSPACE}"
+            withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
+                stage('Authorize to Salesforce') {
+                    def rc = bat(
+                        script: """
+                        "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile "C:\\openssl\\bin\\server.key" --username ${HUB_ORG} --setalias chandradev1
+                        """,
+                        returnStatus: true
+                    )
+                    if (rc != 0) {
+                        error "Authorization failed."
                     }
-                } catch (Exception e) {
-                    error "Validation failed with error: ${e.getMessage()}"
+                    echo "Authorization successful."
+                }
+
+                stage('Deploy or Validate') {
+                    def validateCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel ${TEST_LEVEL} --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
+                    """
+                    def rc = bat(validateCommand, returnStatus: true)
+                    if (rc == 0) {
+                        echo "Validation/Deployment succeeded."
+                    } else {
+                        error "Validation/Deployment failed. Check logs for details."
+                    }
                 }
             }
         }
-	    else if (env.BRANCH_NAME == 'main' && execute) {
-	      stage('Deploy and Run Tests') {
-
-                if (isUnix()) {
-                    // Unix/Linux-based command
-                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
-                } else {
-                    // Windows-based command
-                    def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy  -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
-                    """
-                    def rc = command(validateCommand)
-		echo "Return code: ${rc}"
-                }
-	    }
-
-        }
-        
-    }
-}
-}
-
-node {
-    def commentTrigger
-    def parsedData
-
-    // Step 1: Capture the webhook payload
-    stage('Process GitHub Webhook') {
-        // Assuming the webhook payload is passed as an environment variable
-        def webhookPayload = env.GITHUB_WEBHOOK_PAYLOAD
-        if (!webhookPayload) {
-            error "No webhook payload found. Ensure webhook is properly configured."
-        }
-
-        echo "Received webhook payload: ${webhookPayload}"
-
-        // Parse the payload
-        def jsonSlurper = new JsonSlurperClassic()
-        def payload = jsonSlurper.parseText(webhookPayload)
-
-        // Extract comment
-        commentTrigger = payload.comment?.body
-        if (!commentTrigger) {
-            error "No comment found in webhook payload."
-        }
-
-        echo "Triggered by comment: ${commentTrigger}"
-    }
-
-    // Step 2: Extract specific data from the comment
-    stage('Extract Data from Comment') {
-        // Example: Look for commands like `/deploy feature-123`
-        def match = (commentTrigger =~ /\/deploy (\w+-\d+)/)
-        if (match) {
-            parsedData = match[0][1]  // Extract the matched data (e.g., "feature-123")
-            echo "Extracted data from comment: ${parsedData}"
-        } else {
-            error "Comment does not contain a valid trigger."
-        }
-    }
-
-    // Step 3: Perform actions based on extracted data
-    stage('Execute Based on Comment Trigger') {
-        if (parsedData) {
-            echo "Starting deployment for ${parsedData}"
-            // Example: Pass the data to your deployment logic
-            // deployBranch(parsedData)
-        } else {
-            error "No actionable data extracted from the comment."
-        }
-    }
-}
-def command(script) {
-    if (isUnix()) {
-        return sh(returnStatus: true, script: script);
-    } else {
-		return bat(returnStatus: true, script: script);
     }
 }

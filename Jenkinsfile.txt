@@ -174,7 +174,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                 try {
                     // Run Salesforce CLI validation command
                     def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests ${env.TEST_CLASSES} --wait 10 --verbose --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
                     """
                     def rawOutput = bat(returnStdout: true, script: validateCommand).trim()
     

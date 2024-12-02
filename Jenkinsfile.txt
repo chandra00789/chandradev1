@@ -23,8 +23,8 @@ node {
             echo('Build was not started by a comment trigger.')
             // Add a comment to notify the user how to trigger builds with test classes
             echo 'Adding comment to the PR.'
-            def comment = pullRequest.comment('This PR is highly illogical..')
-            return // Stop execution here
+            def comment = pullRequest.comment("No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'")
+            error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
         }
 
         // Extract test class names from the comment

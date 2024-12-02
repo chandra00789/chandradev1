@@ -37,10 +37,13 @@ node {
         echo "Extracted test classes: ${testClasses.join(', ')}"
 
         // Store test classes to be used later
-        def TEST_CLASSES = testClasses.join(',')
+        env.TEST_CLASSES = testClasses.join(',')
         echo TEST_CLASSES
 
-        	def BUILD_NUMBER=env.BUILD_NUMBER
+       }
+}
+node {
+def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
     def SFDC_USERNAME
 
@@ -211,7 +214,6 @@ if (env.BRANCH_NAME.startsWith('PR')) {
         
     }
     }
-}
 }
 def command(script) {
     if (isUnix()) {

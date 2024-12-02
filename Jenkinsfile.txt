@@ -1,18 +1,20 @@
 #!groovy
 import groovy.json.JsonSlurperClassic
 node {
-    stage 'Echo stuff pointlessly'
-    def payload = new groovy.json.JsonSlurper().parseText("${params.payload}")
-    // Echoes the new commit hash
-	def causes = currentBuild.getBuildCauses()
-	echo currentBuild
-	echo causes
-	causes.each { key, value ->
-	echo key
-	echo value
-}
+    stage('Echo stuff pointlessly') {
+        // Parse the payload safely
+        def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 
-    echo payload
+        // Safely get build causes and convert them to a readable string
+        def causes = currentBuild.getBuildCauses()
+        echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
+
+        // Echo the payload
+        echo "Payload: ${payload}"
+
+        // Optional: Debugging currentBuild as a string
+        echo "Current build: ${currentBuild.toString()}"
+    }
 }
 node {
 

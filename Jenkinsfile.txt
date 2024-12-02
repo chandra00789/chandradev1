@@ -191,7 +191,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        }
 		
 		        // Validate deployment status
-		        if (deploymentInfo.status == 'Succeeded' && deploymentInfo.success == true) {
+		        if (deploymentInfo.result.status == 'Succeeded' && deploymentInfo.result.success == true) {
 		            echo "Validation succeeded."
 		            env.DEPLOYMENT_ID = deploymentInfo.result.id
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"

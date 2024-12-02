@@ -5,6 +5,8 @@ node {
     def payload = new groovy.json.JsonSlurper().parseText("${params.payload}")
     // Echoes the new commit hash
 	def causes = currentBuild.getBuildCauses()
+	echo currentBuild
+	echo causes
 	causes.each { key, value ->
 	echo key
 	echo value

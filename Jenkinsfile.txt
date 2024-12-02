@@ -197,8 +197,9 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        if (deploymentInfo.result.status == 'Succeeded' && deploymentInfo.result.success == true) {
 		            echo "Validation succeeded."
 		            env.DEPLOYMENT_ID = deploymentInfo.result.id
-			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id}")
+			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id} , Deployment info: ${deploymentInfo}")
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
+				def deploymentId = "${env.DEPLOYMENT_ID}"
 				writeFile file: 'deployment_id.txt', text: deploymentId
 				archiveArtifacts artifacts: 'deployment_id.txt', allowEmptyArchive: false
 				echo "Deployment ID has been written to deployment_id.txt and archived."

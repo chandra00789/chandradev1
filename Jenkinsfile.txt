@@ -42,7 +42,7 @@ node {
         echo TEST_CLASSES
 }
        }
-}
+
 node {
 def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"

@@ -177,22 +177,24 @@ if (env.BRANCH_NAME.startsWith('PR')) {
     
 		    echo "Raw output: ${rawOutput}"
 		    
-		    // Extract only the JSON part of the output
-		    def jsonOutput = rawOutput.split("\\n").find { it.trim().startsWith("{") && it.trim().endsWith("}") }
-		    if (!jsonOutput) {
+		    // Extract JSON block from rawOutput
+		    def jsonStart = rawOutput.indexOf('{')
+		    def jsonEnd = rawOutput.lastIndexOf('}')
+		    if (jsonStart >= 0 && jsonEnd >= jsonStart) {
+		        def jsonOutput = rawOutput.substring(jsonStart, jsonEnd + 1)
+		        echo "Extracted JSON: ${jsonOutput}"
+		        def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
+		        
+		        if (deploymentInfo.status == 'Succeeded') {
+		            echo "Package validation succeeded."
+		            env.DEPLOYMENT_ID = deploymentInfo.result.id
+		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
+		        } else {
+		            error "Validation failed. Check logs for details."
+		        }
+		    } else {
 		        error "Failed to extract JSON from the output."
 		    }
-		    
-		    echo "Filtered JSON: ${jsonOutput}"
-		    
-		    def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
-                if (deploymentInfo.status == 'Succeeded') {
-                    echo "Package validation succeeded."
-                    env.DEPLOYMENT_ID = deploymentInfo.result.id
-                    echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
-                } else {
-                    error "Validation failed. Check logs for details."
-                }
                 } catch (Exception e) {
                     error "Validation failed with error: ${e.getMessage()}"
                 }

@@ -1,6 +1,12 @@
 #!groovy
 import groovy.json.JsonSlurperClassic
 node {
+    stage 'Echo stuff pointlessly'
+    def payload = new groovy.json.JsonSlurper().parseText("${params.payload}")
+    // Echoes the new commit hash
+    echo payload
+}
+node {
 
 	def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"

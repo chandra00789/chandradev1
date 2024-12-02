@@ -173,9 +173,19 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     def validateCommand = """
                     "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests ${env.TEST_CLASSES} --wait 10 --verbose --json
                     """
-                    def output = bat(returnStdout: true, script: validateCommand)
-			 echo "Return code: ${output}"
-                def deploymentInfo = new JsonSlurper().parseText(output)
+                    def rawOutput = bat(returnStdout: true, script: validateCommand).trim()
+    
+		    echo "Raw output: ${rawOutput}"
+		    
+		    // Extract only the JSON part of the output
+		    def jsonOutput = rawOutput.split("\\n").find { it.trim().startsWith("{") && it.trim().endsWith("}") }
+		    if (!jsonOutput) {
+		        error "Failed to extract JSON from the output."
+		    }
+		    
+		    echo "Filtered JSON: ${jsonOutput}"
+		    
+		    def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
                 if (deploymentInfo.status == 'Succeeded') {
                     echo "Package validation succeeded."
                     env.DEPLOYMENT_ID = deploymentInfo.result.id

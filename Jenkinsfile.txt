@@ -23,8 +23,7 @@ node {
             echo('Build was not started by a comment trigger.')
             // Add a comment to notify the user how to trigger builds with test classes
             echo 'Adding comment to the PR.'
-            // Use GitHub CLI or a Jenkins plugin to add a comment
-            // Example GitHub CLI command: gh issue comment $PR_NUMBER --body "To test Classes Write 'test this please.' followed by comma separated test class names."
+            def comment = pullRequest.comment('This PR is highly illogical..')
             return // Stop execution here
         }
 
@@ -38,93 +37,180 @@ node {
         echo "Extracted test classes: ${testClasses.join(', ')}"
 
         // Store test classes to be used later
-        env.TEST_CLASSES = testClasses.join(',')
-    }
-}
+        def TEST_CLASSES = testClasses.join(',')
+        echo TEST_CLASSES
 
-node {
-    def BUILD_NUMBER = env.BUILD_NUMBER
-    def RUN_ARTIFACT_DIR = "tests/${BUILD_NUMBER}"
+        	def BUILD_NUMBER=env.BUILD_NUMBER
+    def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
     def SFDC_USERNAME
-    def CONNECTED_APP_CONSUMER_KEY = "3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
-    def HUB_ORG = "chandradev1@kloudrac.com"
-    def JWT_KEY_CRED_ID = "1fde5a5a-3987-4fbb-b1a6-a236ee570232"
-    def DEPLOYDIR = 'force-app/main/default/'
+
+	
+    def CONNECTED_APP_CONSUMER_KEY="3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
+    def HUB_ORG="chandradev1@kloudrac.com"
+    def JWT_KEY_CRED_ID="1fde5a5a-3987-4fbb-b1a6-a236ee570232"
+    def DEPLOYDIR='force-app/main/default/'
+    
     def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
-    def TEST_LEVEL = 'RunSpecifiedTests'
+    def TEST_LEVEL = 'RunLocalTests'
+	println 'KEY IS' 
+    println JWT_KEY_CRED_ID
+    println HUB_ORG
+    println SFDC_HOST
+    println CONNECTED_APP_CONSUMER_KEY
+	println env.PATH
     def toolbelt = tool 'toolbelt'
     def changedFiles
     def salesforceFiles
-    def execute = true
+    def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
+    println env.PATH
+    def execute =true 
+	echo env.BRANCH_NAME
 
-    stage('Cleanup Workspace') {
-        cleanWs()
+    echo "Hello"
+
+
+    // -------------------------------------------------------------------------
+    // Check out code from source control.
+    // -------------------------------------------------------------------------
+	stage('Cleanup Workspace') {
+    cleanWs()
+}
+    stage('checkout source') {
+if (env.BRANCH_NAME.startsWith('PR')) {
+    checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+	// Fetch the main branch explicitly
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
+    
+    // Check if the main branch is present locally
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout main""")
+
+// Return to SandBranch
+    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
+	changedFiles = bat(
+                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",
+                    returnStdout: true
+                ).trim().split('\n')
+                echo "Changed files: ${changedFiles.join(', ')}"
     }
+	else if(env.BRANCH_NAME == 'main')
+	{
+	checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
+	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
+        bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout -B main origin/main""")
 
-    stage('Checkout Source') {
-        if (env.BRANCH_NAME.startsWith('PR')) {
-            checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-            bat(script: """git fetch origin main""")
-            bat(script: """git checkout main""")
-            bat(script: """git checkout SandBranch""")
-            changedFiles = bat(
-                script: """git diff --name-only main""",
-                returnStdout: true
-            ).trim().split('\n')
-            echo "Changed files: ${changedFiles.join(', ')}"
-        } else if (env.BRANCH_NAME == 'main') {
-            checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-            bat(script: """git fetch origin main""")
-            bat(script: """git checkout -B main origin/main""")
-            changedFiles = bat(
-                script: """git diff --name-only HEAD~1 main""",
-                returnStdout: true
-            ).trim().split('\n')
-            echo "Changed files: ${changedFiles.join(', ')}"
-        }
-    }
+        // Identify all changes since the last successful deployment
+        changedFiles = bat(
+            script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD~1 main""",
+            returnStdout: true
+        ).trim().split('\n')
+	                echo "Changed files: ${changedFiles.join(', ')}"
+	
+	
+	}
+}
 
-    stage('Create Package for Pull Request') {
-        salesforceFiles = changedFiles.findAll { filePath ->
-            filePath.contains('force-app')
-        }
-        echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
+     
 
-        if (salesforceFiles.isEmpty()) {
-            echo "No Salesforce metadata files to deploy."
-            execute = false
-        }
-    }
+    
 
-    if (execute) {
-        withEnv(["HOME=${env.WORKSPACE}"]) {
-            echo "Workspace path is: ${env.WORKSPACE}"
-            withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
-                stage('Authorize to Salesforce') {
-                    def rc = bat(
-                        script: """
-                        "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid ${CONNECTED_APP_CONSUMER_KEY} --jwtkeyfile "C:\\openssl\\bin\\server.key" --username ${HUB_ORG} --setalias chandradev1
-                        """,
-                        returnStatus: true
-                    )
-                    if (rc != 0) {
-                        error "Authorization failed."
-                    }
-                    echo "Authorization successful."
+    // Run all the enclosed stages with access to the Salesforce JWT key credentials.
+    withEnv(["HOME=${env.WORKSPACE}"]) {    
+        echo "Workspace path is: ${env.WORKSPACE}"
+        withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
+            // Authenticate to Salesforce using the server key.
+            stage('Authorize to Salesforce') {
+                if (isUnix()) {
+                    // Unix/Linux-based command
+                    rc = sh """
+    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
+"""
+
+
+                } else {
+                    // Windows-based command
+                   rc = command """
+    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
+"""
+                    echo "Return code: ${rc}"
+                    rc = command """
+                        "C:\\Program Files\\sf\\bin\\sfdx" force:config:set defaultusername=chandradev1
+                    """
+
                 }
 
-                stage('Deploy or Validate') {
+                echo "Return code: ${rc}"
+                
+                echo "auth success"
+            }
+	 stage('Create Package for Pull Request') {
+                echo "Creating package for validation in PR #${env.CHANGE_ID}"
+                // Step 2: Filter Salesforce Metadata Files
+            salesforceFiles = changedFiles.findAll { filePath ->
+		    filePath.contains('force-app')
+		}
+            echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
+
+            if (salesforceFiles.isEmpty()) {
+                echo "No Salesforce metadata files to deploy."
+		execute=false
+                return
+            }
+            }
+
+
+            
+
+		if (env.BRANCH_NAME.startsWith('PR') && execute) {
+                echo "isPullRequest"
+                echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
+		stage('Validate Package') {
+                echo "Validating package.xml"
+                try {
+                    // Run Salesforce CLI validation command
                     def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel ${TEST_LEVEL} --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
                     """
-                    def rc = bat(validateCommand, returnStatus: true)
+                    def rc = command(validateCommand)
+		echo "Return code: ${rc}"
+		println "Hello hiiidfjsdf sjdfdsj"
                     if (rc == 0) {
-                        echo "Validation/Deployment succeeded."
+                        echo "Package validation succeeded"
                     } else {
-                        error "Validation/Deployment failed. Check logs for details."
+                        error "Package validation failed. Check logs for more details."
                     }
+                } catch (Exception e) {
+                    error "Validation failed with error: ${e.getMessage()}"
                 }
             }
         }
+	    else if (env.BRANCH_NAME == 'main' && execute) {
+	      stage('Deploy and Run Tests') {
+
+                if (isUnix()) {
+                    // Unix/Linux-based command
+                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
+                } else {
+                    // Windows-based command
+                    def validateCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy  -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
+                    """
+                    def rc = command(validateCommand)
+		echo "Return code: ${rc}"
+                }
+	    }
+
+        }
+        
+    }
     }
 }
+}
+def command(script) {
+    if (isUnix()) {
+        return sh(returnStatus: true, script: script);
+    } else {
+		return bat(returnStatus: true, script: script);
+    }
+}
+
+

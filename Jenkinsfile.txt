@@ -6,7 +6,8 @@ properties([
     ])
 ])
 node {
-    stage('check trigger cause') {
+    stage('check trigger cause') 
+	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 
@@ -39,9 +40,9 @@ node {
         // Store test classes to be used later
         env.TEST_CLASSES = testClasses.join(',')
         echo TEST_CLASSES
-
-       }
 }
+       }
+
 node {
 def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
@@ -156,6 +157,8 @@ if (env.BRANCH_NAME.startsWith('PR')) {
             if (salesforceFiles.isEmpty()) {
                 echo "No Salesforce metadata files to deploy."
 		execute=false
+		def comment = pullRequest.comment("No Salesforce metadata files to deploy.")
+		error "No Salesforce metadata files to deploy."
                 return
             }
             }
@@ -171,7 +174,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                 try {
                     // Run Salesforce CLI validation command
                     def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests ${env.TEST_CLASSES} --wait 10 --verbose --json
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
                     """
                     def rawOutput = bat(returnStdout: true, script: validateCommand).trim()
     
@@ -194,10 +197,12 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        if (deploymentInfo.result.status == 'Succeeded' && deploymentInfo.result.success == true) {
 		            echo "Validation succeeded."
 		            env.DEPLOYMENT_ID = deploymentInfo.result.id
+			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id}")
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
 		        } else {
-			echo "Validation failed. JSON status: ${deploymentInfo.status}, success: ${deploymentInfo.success}"
-		            error "Validation failed. JSON status: ${deploymentInfo.status}, success: ${deploymentInfo.success}"
+			echo "Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success}"
+		            def comment = pullRequest.comment("Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success} Deployment ID : ${deploymentInfo.result.id}")
+			error "Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success} Deployment ID : ${deploymentInfo.result.id}"
 		        }
 		    } else {
 		        error "Failed to extract JSON from the output."
@@ -219,6 +224,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --validateddeployrequestid ${env.DEPLOYMENT_ID} --targetusername chandradev1 --wait 10 --verbose
                     """
                     def rc = bat(returnStatus: true, script: quickDeployCommand)
+		echo "return code ${rc}"
                     if (rc == 0) {
                         echo "Quick deploy succeeded."
                     } else {

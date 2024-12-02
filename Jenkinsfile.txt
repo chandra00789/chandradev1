@@ -1,5 +1,4 @@
 
-@Library('utils') _
 import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
@@ -11,7 +10,7 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
-echo "Status : ${status.id}"
+	echo "Status : ${status.id}"
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 	
         // Safely get build causes and convert them to a readable string

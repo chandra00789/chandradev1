@@ -174,6 +174,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests ${env.TEST_CLASSES} --wait 10 --verbose --json
                     """
                     def output = bat(returnStdout: true, script: validateCommand)
+			 echo "Return code: ${output}"
                 def deploymentInfo = new JsonSlurper().parseText(output)
                 if (deploymentInfo.status == 'Succeeded') {
                     echo "Package validation succeeded."

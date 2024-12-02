@@ -1,6 +1,11 @@
 #!groovy
 import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
+properties([
+    pipelineTriggers([
+        issueCommentTrigger('.*test this please.*')
+    ])
+])
 node {
     stage('Echo stuff pointlessly') {
         // Parse the payload safely
@@ -9,7 +14,15 @@ node {
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
+	def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
 
+	if (triggerCause) {
+	    echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
+	         "\"${triggerCause.comment}\", which matches the " +
+	         "\"${triggerCause.triggerPattern}\" trigger pattern.")
+	} else {
+	    echo('Build was not started by a trigger')
+	}
         // Echo the payload
         echo "Payload: ${payload}"
 

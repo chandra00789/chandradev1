@@ -200,7 +200,8 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id}")
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
 				withCredentials([string(credentialsId: 'DEPLOYMENT_ID_STORAGE', variable: 'DEPLOYMENT_ID_STORAGE')]) {
-				    DEPLOYMENT_ID_STORAGE = env.DEPLOYMENT_ID
+				    // Save the deployment ID to Jenkins credentials
+				    DEPLOYMENT_ID_STORAGE = "${env.DEPLOYMENT_ID}"
 				    echo "Deployment ID saved to Jenkins credentials."
 				}
 		        } else {

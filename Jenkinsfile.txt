@@ -6,7 +6,7 @@ properties([
     ])
 ])
 node {
-    stage('Echo stuff pointlessly') {
+    stage('check trigger cause') {
         // Parse the payload safely
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 
@@ -170,14 +170,15 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     def validateCommand = """
                     "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
                     """
-                    def rc = command(validateCommand)
-		echo "Return code: ${rc}"
-		println "Hello hiiidfjsdf sjdfdsj"
-                    if (rc == 0) {
-                        echo "Package validation succeeded"
-                    } else {
-                        error "Package validation failed. Check logs for more details."
-                    }
+                    def output = bat(returnStdout: true, script: validateCommand)
+                def deploymentInfo = new JsonSlurper().parseText(output)
+                if (deploymentInfo.status == 'Succeeded') {
+                    echo "Package validation succeeded."
+                    env.DEPLOYMENT_ID = deploymentInfo.result.id
+                    echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
+                } else {
+                    error "Validation failed. Check logs for details."
+                }
                 } catch (Exception e) {
                     error "Validation failed with error: ${e.getMessage()}"
                 }
@@ -190,12 +191,19 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     // Unix/Linux-based command
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
-                    // Windows-based command
-                    def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy  -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunLocalTests --wait 10 --verbose --json
+                    if (env.DEPLOYMENT_ID) {
+                    def quickDeployCommand = """
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --validateddeployrequestid ${env.DEPLOYMENT_ID} --targetusername chandradev1 --wait 10 --verbose
                     """
-                    def rc = command(validateCommand)
-		echo "Return code: ${rc}"
+                    def rc = bat(returnStatus: true, script: quickDeployCommand)
+                    if (rc == 0) {
+                        echo "Quick deploy succeeded."
+                    } else {
+                        error "Quick deploy failed."
+                    }
+                } else {
+                    error "No Deployment ID available for quick deploy."
+                }
                 }
 	    }
 

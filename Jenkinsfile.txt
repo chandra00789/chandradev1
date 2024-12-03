@@ -200,7 +200,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id}")
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
 			    def deploymentId = "${env.DEPLOYMENT_ID}"
-			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: deploymentId)
+			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: env.DEPLOYMENT_ID)
 			    echo "Deployment ID has been saved to deployment_id.txt and archived."
 		        } else {
 			echo "Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success}"

@@ -17,7 +17,7 @@ node {
 	for (commitFile in pullRequest.files) {
 	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
 	}
-	echo "Jenkins home : ${env.JENKINS_HOME}"
+	echo "Jenkins home : ${env.JENKINS_HOME} hello"
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 	echo "WORKSPACE : ${WORKSPACE}"
 	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"

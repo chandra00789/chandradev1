@@ -7,6 +7,10 @@ properties([
     ])
 ])
 node {
+	if (!(env.BRANCH_NAME.startsWith('PR') || env.BRANCH_NAME == 'main'))
+	{
+		return
+	}
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
@@ -46,6 +50,10 @@ node {
        }
 
 node {
+	if (!(env.BRANCH_NAME.startsWith('PR') || env.BRANCH_NAME == 'main'))
+	{
+		return
+	}
 def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
     def SFDC_USERNAME

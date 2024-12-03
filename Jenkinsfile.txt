@@ -43,8 +43,8 @@ node {
         if (!match) {
             error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
         }
-	def Start = commentText.indexOf('<')
-	def End = commentText.lastIndexOf('>')
+	def Start = commentText.indexOf('[')
+	def End = commentText.lastIndexOf(']')
 	def Testclass = commentText.substring(Start +1, End ).trim()
 	echo "Extracted Classes : Testclass}"
         def testClasses = match[0][1].trim().split(/\s*,\s*/)

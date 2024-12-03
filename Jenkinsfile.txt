@@ -193,9 +193,8 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		    def jsonEnd = rawOutput.lastIndexOf('}')
 		    if (jsonStart >= 0 && jsonEnd >= jsonStart) {
 		        def jsonOutput = rawOutput.substring(jsonStart, jsonEnd + 1)
-		        echo "Extracted JSON: ${jsonOutput}"
-		        def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
-			def serializableData = new HashMap<>(deploymentInfo)
+		        
+			def serializableData = processJson(jsonOutput)
 		        // Log warnings
 		        if (serializableData.warnings?.size() > 0) {
 		            echo "Warnings: ${serializableData.warnings}"
@@ -260,6 +259,13 @@ def command(script) {
     } else {
 		return bat(returnStatus: true, script: script);
     }
+}
+@NonCPS
+def processJson(jsonOutput) {
+    echo "Extracted JSON: ${jsonOutput}"
+    def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
+def serializableData = new HashMap<>(deploymentInfo)
+    return serializableData;
 }
 
 

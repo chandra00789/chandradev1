@@ -14,7 +14,9 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
-	
+	for (commitFile in pullRequest.files) {
+	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
+	}
 	echo "Jenkins home : ${env.JENKINS_HOME}"
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 	echo "WORKSPACE : ${WORKSPACE}"

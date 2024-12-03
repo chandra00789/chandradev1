@@ -3,7 +3,7 @@ import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
     pipelineTriggers([
-        issueCommentTrigger('.*test this please.*')
+        issueCommentTrigger('.*Initiate Validation:*')
     ])
 ])
 node {
@@ -14,9 +14,14 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
-	echo "Jenkins home : ${env.JENKINS_HOME}"
+	for (commitFile in pullRequest.files) {
+	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
+	}
+	echo "Jenkins home : ${env.JENKINS_HOME} hello"
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
-	
+	echo "WORKSPACE : ${WORKSPACE}"
+	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
+	echo "JOB_NAME : ${JOB_NAME}"
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
@@ -29,22 +34,24 @@ node {
         } else {
             echo('Build was not started by a comment trigger.')
             // Add a comment to notify the user how to trigger builds with test classes
-            echo 'Adding comment to the PR.'
-            def comment = pullRequest.comment("No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'")
-            error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
+            error "No test classes specified in the comment. Example: 'Initiate Validation: <TestClass1, TestClass2...>'"
         }
 
         // Extract test class names from the comment
         def commentText = triggerCause.comment
-        def match = (commentText =~ /test this please\.(.*)/)
+        def match = (commentText =~ /Initiate Validation:(.*)/)
         if (!match) {
             error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
         }
+	def Start = commentText.indexOf('[')
+	def End = commentText.lastIndexOf(']')
+	def Testclass = commentText.substring(Start +1, End ).trim()
+	echo "Extracted Classes : Testclass}"
         def testClasses = match[0][1].trim().split(/\s*,\s*/)
         echo "Extracted test classes: ${testClasses.join(', ')}"
 
         // Store test classes to be used later
-        env.TEST_CLASSES = testClasses.join(',')
+        env.TEST_CLASSES = Testclass
         echo TEST_CLASSES
 }
        }

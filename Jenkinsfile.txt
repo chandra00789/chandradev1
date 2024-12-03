@@ -195,6 +195,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        def jsonOutput = rawOutput.substring(jsonStart, jsonEnd + 1)
 		        
 			def serializableData = processJson(jsonOutput)
+			jsonOutput = null
 		        // Log warnings
 		        if (serializableData.warnings?.size() > 0) {
 		            echo "Warnings: ${serializableData.warnings}"
@@ -203,16 +204,17 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		        // Validate deployment status
 		        if (serializableData.result.status == 'Succeeded' && serializableData.result.success == true) {
 		            echo "Validation succeeded."
-		            env.DEPLOYMENT_ID = serializableData.result.id
+		            
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${serializableData.result.id}")
-		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
-			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: "${env.DEPLOYMENT_ID}")
+		            echo "Stored Deployment ID: ${${serializableData.result.id}}"
+			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: "${${serializableData.result.id}}")
 			    echo "Deployment ID has been saved to deployment_id.txt and archived."
 		        } else {
 			echo "Validation failed. JSON status: ${serializableData.result.status}, success: ${serializableData.result.success}"
 		            def comment = pullRequest.comment("Validation failed. JSON status: ${serializableData.result.status}, success: ${serializableData.result.success} Deployment ID : ${serializableData.result.id}")
 			error "Validation failed. JSON status: ${serializableData.result.status}, success: ${serializableData.result.success} Deployment ID : ${serializableData.result.id}"
 		        }
+			serializableData = null
 		    } else {
 		        error "Failed to extract JSON from the output."
 		    }
@@ -265,6 +267,7 @@ def processJson(jsonOutput) {
     echo "Extracted JSON: ${jsonOutput}"
     def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
 def serializableData = new HashMap<>(deploymentInfo)
+	deploymentInfo = null
     return serializableData;
 }
 

@@ -1,3 +1,4 @@
+
 import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
@@ -9,8 +10,9 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
+	echo "Jenkins home : ${env.JENKINS_HOME}"
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
-
+	
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
@@ -177,9 +179,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
                     """
                     def rawOutput = bat(returnStdout: true, script: validateCommand).trim()
-    
 		    echo "Raw output: ${rawOutput}"
-		    
 		    // Extract JSON block from rawOutput
 		    def jsonStart = rawOutput.indexOf('{')
 		    def jsonEnd = rawOutput.lastIndexOf('}')
@@ -199,6 +199,9 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		            env.DEPLOYMENT_ID = deploymentInfo.result.id
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${deploymentInfo.result.id}")
 		            echo "Stored Deployment ID: ${env.DEPLOYMENT_ID}"
+			    def deploymentId = "${env.DEPLOYMENT_ID}"
+			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: env.DEPLOYMENT_ID)
+			    echo "Deployment ID has been saved to deployment_id.txt and archived."
 		        } else {
 			echo "Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success}"
 		            def comment = pullRequest.comment("Validation failed. JSON status: ${deploymentInfo.result.status}, success: ${deploymentInfo.result.success} Deployment ID : ${deploymentInfo.result.id}")
@@ -207,6 +210,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		    } else {
 		        error "Failed to extract JSON from the output."
 		    }
+		    
                 } catch (Exception e) {
                     error "Validation failed with error: ${e.getMessage()}"
                 }
@@ -219,9 +223,11 @@ if (env.BRANCH_NAME.startsWith('PR')) {
                     // Unix/Linux-based command
                     rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
                 } else {
-                    if (env.DEPLOYMENT_ID) {
+		    def data = readFile(file: "${env.JENKINS_HOME}\\deployment_id.txt")
+		   
+                    if (data) {
                     def quickDeployCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --validateddeployrequestid ${env.DEPLOYMENT_ID} --targetusername chandradev1 --wait 10 --verbose
+                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --validateddeployrequestid ${data} --targetusername chandradev1 --wait 10 --verbose
                     """
                     def rc = bat(returnStatus: true, script: quickDeployCommand)
 		echo "return code ${rc}"

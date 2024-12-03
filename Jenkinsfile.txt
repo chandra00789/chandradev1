@@ -265,10 +265,12 @@ def command(script) {
 @NonCPS
 def processJson(jsonOutput) {
     echo "Extracted JSON: ${jsonOutput}"
-    def deploymentInfo = new groovy.json.JsonSlurper().parseText(jsonOutput)
-def serializableData = new HashMap<>(deploymentInfo)
-	deploymentInfo = null
-    return serializableData;
+    
+	def object = new JsonSlurper().parseText(jsonOutput)
+  if(object instanceof groovy.json.internal.LazyMap) {
+      return new HashMap<>(object)
+  }
+  return object
 }
 
 

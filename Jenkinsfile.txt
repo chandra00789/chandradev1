@@ -16,6 +16,7 @@ node {
         // Parse the payload safely
 	echo "headRef : ${pullRequest.headRef}"
 	echo "head : ${pullRequest.head}"
+	echo "base : ${pullRequest.base}"
 	for (commitFile in pullRequest.files) {
 	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
 	}

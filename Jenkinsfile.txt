@@ -14,6 +14,8 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
+	echo "headRef : ${pullRequest.headRef}"
+	echo "head : ${pullRequest.head}"
 	for (commitFile in pullRequest.files) {
 	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
 	}

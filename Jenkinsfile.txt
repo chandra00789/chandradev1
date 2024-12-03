@@ -10,9 +10,10 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
+	echo "Jenkins home : ${env.JENKINS_HOME}"
 	def date = new Date()
         def data = "Hello World\nSecond line\n" + date
-        writeFile(file: 'zorg.txt', text: data)
+        writeFile(file: '${env.JENKINS_HOME}/zorg.txt', text: data)
         def payload = new JsonSlurper().parseText(params.payload ?: '{}')
 	
         // Safely get build causes and convert them to a readable string

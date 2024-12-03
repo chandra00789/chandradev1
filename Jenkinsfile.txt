@@ -3,7 +3,7 @@ import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
     pipelineTriggers([
-        issueCommentTrigger('.*Initiate Validation:*')
+        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)]\\s*')
     ])
 ])
 node {
@@ -43,8 +43,12 @@ node {
         if (!match) {
             error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
         }
+
 	def Start = commentText.indexOf('[')
 	def End = commentText.lastIndexOf(']')
+	if (Start == -1 || End == -1 || Start > End) {
+	    error "Invalid comment format. Example: 'Initiate Validation: [TestClass1, TestClass2]'"
+	}
 	def Testclass = commentText.substring(Start +1, End ).trim()
 	echo "Extracted Classes : Testclass}"
         def testClasses = match[0][1].trim().split(/\s*,\s*/)

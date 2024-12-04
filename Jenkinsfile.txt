@@ -162,7 +162,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	echo "in commit type"
             def isMergeCommit = bat(
                         script: """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-parse HEAD^2 2>nul || echo 'no'
+C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-parse HEAD~2 2>nul || echo 'no'
 """,
                         returnStdout: true
                     ).trim()

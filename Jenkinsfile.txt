@@ -99,6 +99,18 @@ def BUILD_NUMBER=env.BUILD_NUMBER
 	echo env.BRANCH_NAME
 
     echo "Hello"
+	echo "headRef : ${pullRequest.headRef}"
+	echo "head : ${pullRequest.head}"
+	echo "base : ${pullRequest.base}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
+	echo "WORKSPACE : ${WORKSPACE}"
+	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
+	echo "JOB_NAME : ${JOB_NAME}"
+	echo "${currentBuild}"
+        // Safely get build causes and convert them to a readable string
+        def causes = currentBuild.getBuildCauses()
+	echo "causes : ${causes}"
+        echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
 
 
     // -------------------------------------------------------------------------

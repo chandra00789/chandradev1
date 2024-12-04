@@ -3,7 +3,7 @@ import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
     pipelineTriggers([
-        issueCommentTrigger('.*Initiate Validation:*')
+        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)]\\s*')
     ])
 ])
 node {
@@ -14,6 +14,11 @@ node {
     stage('check trigger cause') 
 	if (env.BRANCH_NAME.startsWith('PR')) {
         // Parse the payload safely
+	echo "headRef : ${pullRequest.headRef}"
+	echo "head : ${pullRequest.head}"
+	echo "base : ${pullRequest.base}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
 	for (commitFile in pullRequest.files) {
 	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
 	}
@@ -22,8 +27,10 @@ node {
 	echo "WORKSPACE : ${WORKSPACE}"
 	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
 	echo "JOB_NAME : ${JOB_NAME}"
+	echo "${currentBuild}"
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
+	echo "causes : ${causes}"
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
         def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
 
@@ -43,8 +50,12 @@ node {
         if (!match) {
             error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
         }
+
 	def Start = commentText.indexOf('[')
 	def End = commentText.lastIndexOf(']')
+	if (Start == -1 || End == -1 || Start > End) {
+	    error "Invalid comment format. Example: 'Initiate Validation: [TestClass1, TestClass2]'"
+	}
 	def Testclass = commentText.substring(Start +1, End ).trim()
 	echo "Extracted Classes : Testclass}"
         def testClasses = match[0][1].trim().split(/\s*,\s*/)
@@ -88,6 +99,18 @@ def BUILD_NUMBER=env.BUILD_NUMBER
 	echo env.BRANCH_NAME
 
     echo "Hello"
+	echo "headRef : ${pullRequest.headRef}"
+	echo "head : ${pullRequest.head}"
+	echo "base : ${pullRequest.base}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
+	echo "WORKSPACE : ${WORKSPACE}"
+	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
+	echo "JOB_NAME : ${JOB_NAME}"
+	echo "${currentBuild}"
+        // Safely get build causes and convert them to a readable string
+        def causes = currentBuild.getBuildCauses()
+	echo "causes : ${causes}"
+        echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
 
 
     // -------------------------------------------------------------------------

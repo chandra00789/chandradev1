@@ -30,6 +30,7 @@ node {
 	echo "${currentBuild}"
         // Safely get build causes and convert them to a readable string
         def causes = currentBuild.getBuildCauses()
+	echo "causes : ${causes}"
         echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
         def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
 

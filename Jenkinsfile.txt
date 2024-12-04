@@ -83,7 +83,27 @@ node {
 	{
 		return
 	}
-	
+	echo "in commit type"
+            try {
+                        def result = bat(
+                            script: """
+"C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe\" rev-list --parents -n 1 HEAD
+""",
+                            returnStdout: true
+                        ).trim()
+
+                        def parts = result.split(' ')
+                        if (parts.size() == 2) {
+                            echo "This is a direct commit. Parent: ${parts[1]}"
+                        } else if (parts.size() > 2) {
+                            echo "This is a merge commit. Parents: ${parts[1..-1].join(', ')}"
+                        } else {
+                            echo "Unable to determine commit type."
+                        }
+                    } catch (Exception e) {
+                        echo "Error while checking commit type: ${e.message}"
+                        error "Commit type check failed"
+                    }
 def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
     def SFDC_USERNAME
@@ -160,18 +180,25 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	                echo "Changed files: ${changedFiles.join(', ')}"
 
 	echo "in commit type"
-            def result = bat(
-                        script: """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-list --parents -n 1 "${env.BRANCH_NAME}"
+            try {
+                        def result = bat(
+                            script: """
+"C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe\" rev-list --parents -n 1 HEAD
 """,
-                        returnStdout: true
-                    ).trim()
-                    
-                    def parts = result.split(' ')
-                    if (parts.size() > 2) {
-                        echo "This is a merge commit. Parents: ${parts[1..-1].join(', ')}"
-                    } else {
-                        echo "This is a direct commit. Parent: ${parts[1]}"
+                            returnStdout: true
+                        ).trim()
+
+                        def parts = result.split(' ')
+                        if (parts.size() == 2) {
+                            echo "This is a direct commit. Parent: ${parts[1]}"
+                        } else if (parts.size() > 2) {
+                            echo "This is a merge commit. Parents: ${parts[1..-1].join(', ')}"
+                        } else {
+                            echo "Unable to determine commit type."
+                        }
+                    } catch (Exception e) {
+                        echo "Error while checking commit type: ${e.message}"
+                        error "Commit type check failed"
                     }
 	}
 }

@@ -17,6 +17,8 @@ node {
 	echo "headRef : ${pullRequest.headRef}"
 	echo "head : ${pullRequest.head}"
 	echo "base : ${pullRequest.base}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
+	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
 	for (commitFile in pullRequest.files) {
 	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
 	}

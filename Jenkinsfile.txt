@@ -162,7 +162,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 	echo "in commit type"
             def result = bat(
                         script: """
-C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-list --parents -n 1 HEAD'
+C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-list --parents -n 1 env.BRANCH_NAME'
 """,
                         returnStdout: true
                     ).trim()

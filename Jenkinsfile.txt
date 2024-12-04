@@ -84,8 +84,7 @@ node {
 		return
 	}
 	stage('Check Commit Type') {
-    steps {
-        script {
+echo "in commit type"
             def isMergeCommit = bat(
                 script: "C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe rev-parse HEAD^2 2>/dev/null || echo 'no'",
                 returnStdout: true
@@ -96,8 +95,6 @@ node {
             } else {
                 echo "This is a direct commit."
             }
-        }
-    }
 }
 def BUILD_NUMBER=env.BUILD_NUMBER
     def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"

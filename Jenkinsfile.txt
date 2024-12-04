@@ -108,7 +108,7 @@ def BUILD_NUMBER=env.BUILD_NUMBER
     println env.PATH
     def execute =true 
 	echo env.BRANCH_NAME
-	echo "params : ${params.refeerence}"
+	echo "params : ${params}"
     echo "Hello"
 	
 	echo "GIT_COMMIT : ${env.GIT_COMMIT}"

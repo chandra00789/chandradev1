@@ -99,9 +99,7 @@ def BUILD_NUMBER=env.BUILD_NUMBER
 	echo env.BRANCH_NAME
 
     echo "Hello"
-	echo "headRef : ${pullRequest.headRef}"
-	echo "head : ${pullRequest.head}"
-	echo "base : ${pullRequest.base}"
+	
 	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
 	echo "WORKSPACE : ${WORKSPACE}"
 	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
@@ -197,7 +195,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
             if (salesforceFiles.isEmpty()) {
                 echo "No Salesforce metadata files to deploy."
 		execute=false
-		def comment = pullRequest.comment("No Salesforce metadata files to deploy.")
+		
 		error "No Salesforce metadata files to deploy."
                 return
             }

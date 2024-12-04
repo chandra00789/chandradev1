@@ -108,7 +108,7 @@ def BUILD_NUMBER=env.BUILD_NUMBER
     println env.PATH
     def execute =true 
 	echo env.BRANCH_NAME
-	echo "params : ${params}"
+	echo "params : ${params.reference}"
     echo "Hello"
 	
 	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
@@ -206,7 +206,7 @@ if (env.BRANCH_NAME.startsWith('PR')) {
             if (salesforceFiles.isEmpty()) {
                 echo "No Salesforce metadata files to deploy."
 		execute=false
-		def comment = pullRequest.comment("No Salesforce metadata files to deploy.")
+		
 		error "No Salesforce metadata files to deploy."
                 return
             }

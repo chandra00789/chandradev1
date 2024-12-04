@@ -3,7 +3,18 @@ import groovy.json.JsonSlurperClassic
 import groovy.json.JsonSlurper
 properties([
     pipelineTriggers([
-        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)]\\s*')
+        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)]\\s*'),
+	[$class: 'GenericTrigger',
+	    genericVariables: [
+	     [key: 'reference', value: '$.ref'],
+	     
+	    ],
+	    
+	    printContributedVariables: true,
+	    printPostContent: true,
+	    regexpFilterText: '',
+	    regexpFilterExpression: ''
+	   ]
     ])
 ])
 node {

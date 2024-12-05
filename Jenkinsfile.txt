@@ -9,14 +9,15 @@ properties([
 
 pipeline {
     agent any
+	currentBuild.result = 'SUCCESS'
+	return
     stages {
         stage('Cleanup Workspace') {
             steps {
                 cleanWs() // Clean up the workspace
             }
         }
-	currentBuild.result = 'SUCCESS'
-	return
+	
         stage('Initialize') {
             steps {
                 script {

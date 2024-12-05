@@ -16,7 +16,7 @@ node {
         stage('Initialize') {
                 
                     // Ensure the project directory exists
-                    env.run = (1==1)
+                    env.run = "true"
 					def projectName = env.JOB_NAME.split('/')[0]
                     env.PROJECT_NAME = projectName
 					env.CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\${env.PROJECT_NAME}"
@@ -41,7 +41,7 @@ node {
                     if(!fileExists(CONFIG_FILE) || !branchConfig){
                         echo "No configuration file found. Exiting build."
                         currentBuild.result = 'SUCCESS'
-                        env.run = (1==0)
+                        env.run = "false"
                         return
                     }
             
@@ -49,7 +49,7 @@ node {
         }
         stage('Checkout Source') {
                     echo "${env.run}"
-                    if(!env.run)
+                    if("${env.run}"=="false")
                     {
                         return
                     }

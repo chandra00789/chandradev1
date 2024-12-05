@@ -88,14 +88,8 @@ def checkoutPRSource() {
 }
 
 def checkoutBranchSource() {
-    echo "Checking out branch: ${env.BRANCH_NAME}..."
-    checkout([
-        $class: 'GitSCM',
-        branches: [[name: env.BRANCH_NAME]],
-        userRemoteConfigs: [[url: env.GIT_URL]],
-        extensions: [[$class: 'CleanBeforeCheckout']]
-    ])
-    echo "Checked out branch: ${env.BRANCH_NAME}"
+    
+    checkout scm
 }
 
 def handlePullRequest(Config) {

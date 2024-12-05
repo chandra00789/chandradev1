@@ -94,7 +94,7 @@ def checkoutPRSource() {
 }
 
 def checkoutBranchSource() {
-    
+    echo "hello"
     checkout scm
 }
 

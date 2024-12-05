@@ -9,14 +9,12 @@ properties([
 
 node {
         stage('Cleanup Workspace') {
-            steps {
+
                 cleanWs() // Clean up the workspace
-            }
         }
 	
         stage('Initialize') {
-            steps {
-                script {
+                
                     // Ensure the project directory exists
                     env.run = true
 					def projectName = env.JOB_NAME.split('/')[0]
@@ -45,12 +43,11 @@ node {
                         env.run = false
                         return
                     }
-                }
-            }
+            
+            
         }
         stage('Checkout Source') {
-            steps {
-                script {
+
                     if(!env.run)
                     return
                     def isPR = env.BRANCH_NAME.startsWith('PR')
@@ -59,12 +56,9 @@ node {
                     } else {
                         checkoutBranchSource()
                     }
-                }
-            }
+                
         }
         stage('Process Trigger and Build Logic') {
-            steps {
-                script {
                     if(!env.run)
                     return
                     def isPR = env.BRANCH_NAME.startsWith('PR')
@@ -73,8 +67,6 @@ node {
                     } else {
                         handleNonPullRequest(config)
                     }
-                }
-            }
         }
 }
 

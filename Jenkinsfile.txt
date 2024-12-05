@@ -19,7 +19,7 @@ node {
                     env.run = true
 					def projectName = env.JOB_NAME.split('/')[0]
                     env.PROJECT_NAME = projectName
-					env.CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\{env.PROJECT_NAME}"
+					env.CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\${env.PROJECT_NAME}"
                     env.CONFIG_FILE = "${env.CONFIG_DIR}\\config.json"
 
                     echo "Project Name: ${env.PROJECT_NAME}"
@@ -29,7 +29,7 @@ node {
                     // Read the configuration file
                     if (fileExists(CONFIG_FILE)) {
                         def config = readProjectConfig(CONFIG_FILE)
-			echo "${config}"
+                        echo "${config}"
                         def isPR = env.BRANCH_NAME.startsWith('PR')
                         if (isPR) {
                             branchConfig = config[pullRequest.base] 
@@ -48,7 +48,7 @@ node {
             
         }
         stage('Checkout Source') {
-
+                    echo "${env.run}"
                     if(!env.run)
                     return
                     def isPR = env.BRANCH_NAME.startsWith('PR')
@@ -165,6 +165,7 @@ def handleNonPullRequest(branchConfig) {
     if (changedFiles.isEmpty()) {
         echo "No changes detected. Exiting build."
         currentBuild.result = 'SUCCESS'
+        env.run = false
         return
     }
 

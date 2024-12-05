@@ -50,7 +50,10 @@ node {
         stage('Checkout Source') {
                     echo "${env.run}"
                     if(!env.run)
-                    return
+                    {
+                        return
+                    }
+                    
                     def isPR = env.BRANCH_NAME.startsWith('PR')
                     if (isPR) {
                         checkoutPRSource()
@@ -61,7 +64,9 @@ node {
         }
         stage('Process Trigger and Build Logic') {
                     if(!env.run)
-                    return
+                    {
+                        return
+                    }
                     def isPR = env.BRANCH_NAME.startsWith('PR')
                     if (isPR) {
                         handlePullRequest(config)

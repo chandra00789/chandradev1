@@ -42,7 +42,7 @@ pipeline {
                     if(!fileExists(CONFIG_FILE) || !branchConfig){
                         echo "No configuration file found. Exiting build."
                         currentBuild.result = 'SUCCESS'
-			exit 0
+			exit 1
                         return
                     }
                 }

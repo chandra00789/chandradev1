@@ -8,8 +8,6 @@ properties([
 ])
 
 node {
-	
-    stages {
         stage('Cleanup Workspace') {
             steps {
                 cleanWs() // Clean up the workspace
@@ -78,7 +76,6 @@ node {
                 }
             }
         }
-    }
 }
 
 def readProjectConfig(filePath) {

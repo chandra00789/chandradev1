@@ -10,9 +10,7 @@ properties([
 pipeline {
     agent any
     environment {
-        PROJECT_NAME = JOB_NAME.split('/')[0]
-        CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\${PROJECT_NAME}"
-        CONFIG_FILE = "${CONFIG_DIR}\\config.json"
+        
     }
     stages {
         stage('Cleanup Workspace') {
@@ -24,8 +22,15 @@ pipeline {
             steps {
                 script {
                     // Ensure the project directory exists
-                    new File(CONFIG_DIR).mkdirs()
+					def projectName = env.JOB_NAME.split('/')[0]
+                    env.PROJECT_NAME = projectName
+					env.CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\{env.PROJECT_NAME}"
+                    env.CONFIG_FILE = "${env.CONFIG_DIR}\\config.json"
 
+                    echo "Project Name: ${env.PROJECT_NAME}"
+                    echo "Config File Path: ${env.CONFIG_FILE}"
+                    new File(env.CONFIG_DIR).mkdirs()
+					
                     // Read the configuration file
                     if (fileExists(CONFIG_FILE)) {
                         def config = readProjectConfig(CONFIG_FILE)
@@ -181,7 +186,7 @@ def handleNonPullRequest(branchConfig) {
     authorizeTargetOrg(branchConfig)
     deployChangedFiles(changedFiles, branchConfig)
     
-    def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+    def deploymentIdFile = "${env.CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
     if (fileExists(deploymentIdFile)) {
         def deploymentId = readFile(deploymentIdFile).trim()
         echo "Found Deployment ID: ${deploymentId}. Attempting quick deploy."
@@ -282,7 +287,7 @@ def validateSalesforcePackage(config, testLevel, changedFiles) {
 		            
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${serializableData.result.id}")
 		            echo "Stored Deployment ID: ${serializableData.result.id}"
-                    def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+                    def deploymentIdFile = "${env.CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
                     writeFile(file: deploymentIdFile, text: "${serializableData.result.id}")
 			    
 			    echo "Deployment ID has been saved to deployment_id.txt and archived."
@@ -351,7 +356,7 @@ def RunSpecifiedTests(changedFiles, testClasses, targetBranchConfig) {
         if (serializableData.result.status == 'Succeeded' && serializableData.result.success == true) {
             echo "Specified tests succeeded."
             def deploymentId = serializableData.result.id
-            def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+            def deploymentIdFile = "${env.CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
             writeFile(file: deploymentIdFile, text: deploymentId)
             echo "Stored Deployment ID: ${deploymentId} for successful validation."
         } else {

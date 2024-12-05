@@ -29,6 +29,7 @@ node {
                     // Read the configuration file
                     if (fileExists(CONFIG_FILE)) {
                         def config = readProjectConfig(CONFIG_FILE)
+			echo "${config}"
                         def isPR = env.BRANCH_NAME.startsWith('PR')
                         if (isPR) {
                             branchConfig = config[pullRequest.base] 

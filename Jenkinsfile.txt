@@ -1,226 +1,271 @@
-
 import groovy.json.JsonSlurperClassic
-import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
 properties([
     pipelineTriggers([
-        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)]\\s*')
+        issueCommentTrigger('Initiate Validation:\\s*\\[(.*?)\\]\\s*') // Comment trigger
     ])
 ])
-node {
-	if (!(env.BRANCH_NAME.startsWith('PR') || env.BRANCH_NAME == 'main'))
-	{
-		return
-	}
-    stage('check trigger cause') 
-	if (env.BRANCH_NAME.startsWith('PR')) {
-        // Parse the payload safely
-	echo "headRef : ${pullRequest.headRef}"
-	echo "head : ${pullRequest.head}"
-	echo "base : ${pullRequest.base}"
-	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
-	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
-	for (commitFile in pullRequest.files) {
-	    echo "SHA: ${commitFile.sha} File Name: ${commitFile.filename} Status: ${commitFile.status}"
-	}
-	echo "Jenkins home : ${env.JENKINS_HOME} hello"
-        def payload = new JsonSlurper().parseText(params.payload ?: '{}')
-	echo "WORKSPACE : ${WORKSPACE}"
-	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
-	echo "JOB_NAME : ${JOB_NAME}"
-	echo "${currentBuild}"
-        // Safely get build causes and convert them to a readable string
-        def causes = currentBuild.getBuildCauses()
-	echo "causes : ${causes}"
-        echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
-        def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
 
-        if (triggerCause) {
-            echo("Build was started by ${triggerCause.userLogin}, who wrote: " +
-                 "\"${triggerCause.comment}\", which matches the " +
-                 "\"${triggerCause.triggerPattern}\" trigger pattern.")
-        } else {
-            echo('Build was not started by a comment trigger.')
-            // Add a comment to notify the user how to trigger builds with test classes
-            error "No test classes specified in the comment. Example: 'Initiate Validation: <TestClass1, TestClass2...>'"
+pipeline {
+    agent any
+    environment {
+        PROJECT_NAME = JOB_NAME.split('/')[0]
+        CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\${PROJECT_NAME}"
+        CONFIG_FILE = "${CONFIG_DIR}\\config.json"
+    }
+    stages {
+        stage('Cleanup Workspace') {
+            steps {
+                cleanWs() // Clean up the workspace
+            }
         }
+        stage('Initialize') {
+            steps {
+                script {
+                    // Ensure the project directory exists
+                    new File(CONFIG_DIR).mkdirs()
 
-        // Extract test class names from the comment
+                    // Read the configuration file
+                    if (fileExists(CONFIG_FILE)) {
+                        def config = readProjectConfig(CONFIG_FILE)
+                        def isPR = env.BRANCH_NAME.startsWith('PR')
+                        if (isPR) {
+                            branchConfig = config[pullRequest.base] 
+                        } else {
+                            branchConfig = config[env.BRANCH_NAME] 
+                        }
+                        
+                    }
+                    if(!fileExists(CONFIG_FILE) || !branchConfig){
+                        echo "No configuration file found. Exiting build."
+                        currentBuild.result = 'SUCCESS'
+                        return
+                    }
+                }
+            }
+        }
+        stage('Checkout Source') {
+            steps {
+                script {
+                    def isPR = env.BRANCH_NAME.startsWith('PR')
+                    if (isPR) {
+                        checkoutPRSource()
+                    } else {
+                        checkoutBranchSource()
+                    }
+                }
+            }
+        }
+        stage('Process Trigger and Build Logic') {
+            steps {
+                script {
+                    def isPR = env.BRANCH_NAME.startsWith('PR')
+                    if (isPR) {
+                        handlePullRequest(config)
+                    } else {
+                        handleNonPullRequest(config)
+                    }
+                }
+            }
+        }
+    }
+}
+
+def readProjectConfig(filePath) {
+    def jsonContent = readFile(filePath)
+    return readJSON text: jsonContent
+}
+
+def checkoutPRSource() {
+    echo "Checking out PR source branch..."
+    checkout([
+        $class: 'GitSCM',
+        branches: [[name: env.CHANGE_BRANCH]],
+        userRemoteConfigs: [[url: env.GIT_URL]],
+        extensions: [[$class: 'CleanBeforeCheckout']]
+    ])
+    echo "Checked out PR source branch: ${env.CHANGE_BRANCH}"
+}
+
+def checkoutBranchSource() {
+    echo "Checking out branch: ${env.BRANCH_NAME}..."
+    checkout([
+        $class: 'GitSCM',
+        branches: [[name: env.BRANCH_NAME]],
+        userRemoteConfigs: [[url: env.GIT_URL]],
+        extensions: [[$class: 'CleanBeforeCheckout']]
+    ])
+    echo "Checked out branch: ${env.BRANCH_NAME}"
+}
+
+def handlePullRequest(Config) {
+    def targetBranch = pullRequest.base // Extract target branch for the PR
+    def targetBranchConfig = Config[targetBranch]
+
+    if (!targetBranchConfig) {
+        echo "No config found for target branch: ${targetBranch}. Exiting build."
+        currentBuild.result = 'SUCCESS'
+        return
+    }
+
+    def buildType = Config.buildType ?: 'manual'
+    def isManual = buildType == 'manual'
+
+    def triggerCause = currentBuild.rawBuild.getCause(org.jenkinsci.plugins.pipeline.github.trigger.IssueCommentCause)
+    if (triggerCause) {
+        echo "Build triggered by comment: ${triggerCause.comment}"
+        if (!isManual) {
+            def prevBuildStatus = getPreviousBuildStatus()
+            echo "Exiting with previous build status: ${prevBuildStatus}"
+            currentBuild.result = prevBuildStatus
+            return
+        }
+        def changedFiles = getChangedFilesPR()
+        authorizeTargetOrg(targetBranchConfig)
         def commentText = triggerCause.comment
-        def match = (commentText =~ /Initiate Validation:(.*)/)
-        if (!match) {
-            error "No test classes specified in the comment. Example: 'test this please. TestClass1, TestClass2'"
+        def match = (commentText =~ /Initiate Validation:\s*(.*?)\s*$/)
+        if (!match || match[0][1].trim().isEmpty()) {
+            error "No test classes specified in the comment. Example: 'Initiate Validation: TestClass1, TestClass2, TestClass3'"
         }
 
-	def Start = commentText.indexOf('[')
-	def End = commentText.lastIndexOf(']')
-	if (Start == -1 || End == -1 || Start > End) {
-	    error "Invalid comment format. Example: 'Initiate Validation: [TestClass1, TestClass2]'"
-	}
-	def Testclass = commentText.substring(Start +1, End ).trim()
-	echo "Extracted Classes : Testclass}"
-        def testClasses = match[0][1].trim().split(/\s*,\s*/)
+        def testClasses = match[0][1].split(/\s*,\s*/).collect { it.trim() }
         echo "Extracted test classes: ${testClasses.join(', ')}"
 
-        // Store test classes to be used later
-        env.TEST_CLASSES = Testclass
-        echo TEST_CLASSES
-}
-       }
+        // Store test classes in the environment for later use
+        env.TEST_CLASSES = testClasses.join(',')
+        RunSpecifiedTests(changedFiles,testClasses,targetBranchConfig)
 
-node {
-	if (!(env.BRANCH_NAME.startsWith('PR') || env.BRANCH_NAME == 'main'))
-	{
-		return
-	}
-def BUILD_NUMBER=env.BUILD_NUMBER
-    def RUN_ARTIFACT_DIR="tests/${BUILD_NUMBER}"
-    def SFDC_USERNAME
+        
+    } else
+    {
+        if (isManual) {
+            error "Automatic builds must be triggered automatically."
+        }
+        def changedFiles = getChangedFilesPR()
+        authorizeTargetOrg(targetBranchConfig)
 
-	
-    def CONNECTED_APP_CONSUMER_KEY="3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9"
-    def HUB_ORG="chandradev1@kloudrac.com"
-    def JWT_KEY_CRED_ID="1fde5a5a-3987-4fbb-b1a6-a236ee570232"
-    def DEPLOYDIR='force-app/main/default/'
-    
-    def SFDC_HOST = env.SFDC_HOST ?: "https://login.salesforce.com"
-    def TEST_LEVEL = 'RunLocalTests'
-	println 'KEY IS' 
-    println JWT_KEY_CRED_ID
-    println HUB_ORG
-    println SFDC_HOST
-    println CONNECTED_APP_CONSUMER_KEY
-	println env.PATH
-    def toolbelt = tool 'toolbelt'
-    def changedFiles
-    def salesforceFiles
-    def GITHUB_TOKEN_CREDENTIALS_ID = 'GITHUB_TOKEN' // Set your GitHub token credentials ID here
-    println env.PATH
-    def execute =true 
-	echo env.BRANCH_NAME
+        def testLevel = targetBranchConfig.testLevel
+        switch (testLevel) {
+            case 'RunAllTests':
+                validateAllTests(targetBranchConfig, changedFiles)
+                break
+            case 'RunLocalTests':
+                validateLocalTests(targetBranchConfig, changedFiles)
+                break
+            default:
+                validateDefaultTests(targetBranchConfig, changedFiles)
+                break
+        }
 
-    echo "Hello"
-	
-	echo "GIT_COMMIT : ${env.GIT_COMMIT}"
-	echo "WORKSPACE : ${WORKSPACE}"
-	echo "JOB_BASE_NAME : ${JOB_BASE_NAME}"
-	echo "JOB_NAME : ${JOB_NAME}"
-	echo "${currentBuild}"
-        // Safely get build causes and convert them to a readable string
-        def causes = currentBuild.getBuildCauses()
-	echo "causes : ${causes}"
-        echo "Current build causes: ${causes.collect { it.toString() }.join(', ')}"
-
-
-    // -------------------------------------------------------------------------
-    // Check out code from source control.
-    // -------------------------------------------------------------------------
-	stage('Cleanup Workspace') {
-    cleanWs()
-}
-    stage('checkout source') {
-if (env.BRANCH_NAME.startsWith('PR')) {
-    checkout([$class: 'GitSCM', branches: [[name: '*/SandBranch']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-	// Fetch the main branch explicitly
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
-    
-    // Check if the main branch is present locally
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout main""")
-
-// Return to SandBranch
-    bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout SandBranch""")
-	changedFiles = bat(
-                    script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only main""",
-                    returnStdout: true
-                ).trim().split('\n')
-                echo "Changed files: ${changedFiles.join(', ')}"
     }
-	else if(env.BRANCH_NAME == 'main')
-	{
-	checkout([$class: 'GitSCM', branches: [[name: '*/main']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'jenkinstestcpr', url: 'https://github.com/chandra00789/chandradev1.git']]])
-	bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe fetch origin main""")
-        bat(script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe checkout -B main origin/main""")
-
-        // Identify all changes since the last successful deployment
-        changedFiles = bat(
-            script: """C:\\Users\\Kloudrac\\AppData\\Local\\Programs\\Git\\bin\\git.exe diff --name-only HEAD~1 main""",
-            returnStdout: true
-        ).trim().split('\n')
-	                echo "Changed files: ${changedFiles.join(', ')}"
-	
-	
-	}
-}
-
-     
 
     
+}
 
-    // Run all the enclosed stages with access to the Salesforce JWT key credentials.
-    withEnv(["HOME=${env.WORKSPACE}"]) {    
-        echo "Workspace path is: ${env.WORKSPACE}"
-        withCredentials([file(credentialsId: JWT_KEY_CRED_ID, variable: 'JWT_KEY_CRED_ID')]) {
-            // Authenticate to Salesforce using the server key.
-            stage('Authorize to Salesforce') {
-                if (isUnix()) {
-                    // Unix/Linux-based command
-                    rc = sh """
-    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
-"""
+def handleNonPullRequest(branchConfig) {
+    if (!branchConfig) {
+        echo "No configuration found for branch: ${env.BRANCH_NAME}. Exiting build."
+        currentBuild.result = 'SUCCESS'
+        return
+    }
 
+    def changedFiles = getChangedFilesNonPR()
+    if (changedFiles.isEmpty()) {
+        echo "No changes detected. Exiting build."
+        currentBuild.result = 'SUCCESS'
+        return
+    }
 
-                } else {
-                    // Windows-based command
-                   rc = command """
-    "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant --instanceurl https://login.salesforce.com --clientid 3MVG9WVXk15qiz1J7cu9IlavNr.AWS435dwUVopFudA.O5DGhZ7QoP49guqLmzqmgbA_JknOI4DFsPogdVRv9 --jwtkeyfile "C:\\openssl\\bin\\server.key" --username chandradev1@kloudrac.com --setalias chandradev1
-"""
-                    echo "Return code: ${rc}"
-                    rc = command """
-                        "C:\\Program Files\\sf\\bin\\sfdx" force:config:set defaultusername=chandradev1
-                    """
+    authorizeTargetOrg(branchConfig)
+    deployChangedFiles(changedFiles, branchConfig)
+    
+    def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+    if (fileExists(deploymentIdFile)) {
+        def deploymentId = readFile(deploymentIdFile).trim()
+        echo "Found Deployment ID: ${deploymentId}. Attempting quick deploy."
+        if (!quickDeploy(deploymentId, branchConfig)) {
+            echo "Quick deploy failed. Deploying full package."
+            deploySalesforcePackage(branchConfig )
+        }
+    } else {
+        echo "No Deployment ID found for branch: ${env.BRANCH_NAME}. Exiting build."
+        currentBuild.result = 'SUCCESS'
+        return
+    }
+}
 
-                }
+def getChangedFilesPR() {
+    def files = []
+    for (commitFile in pullRequest.files) {
+        files.add(commitFile.filename)
+    }
+    def salesforceFiles = files.findAll { filePath ->
+        filePath.contains('force-app')
+    }
+    echo "Filtered Salesforce Files for PR: ${salesforceFiles.join(', ')}"
+    return salesforceFiles
+}
 
-                echo "Return code: ${rc}"
-                
-                echo "auth success"
+def getChangedFilesNonPR() {
+    def changes = []
+    def changeLogSets = currentBuild.changeSets
+    for (changeLog in changeLogSets) {
+        for (entry in changeLog.items) {
+            entry.affectedFiles.each { file ->
+                changes.add(file.path)
             }
-	 stage('Create Package for Pull Request') {
-                echo "Creating package for validation in PR #${env.CHANGE_ID}"
-                // Step 2: Filter Salesforce Metadata Files
-            salesforceFiles = changedFiles.findAll { filePath ->
-		    filePath.contains('force-app')
-		}
-            echo "Filtered Salesforce Files: ${salesforceFiles.join(', ')}"
+        }
+    }
+    def salesforceFiles = changes.findAll { filePath ->
+        filePath.contains('force-app')
+    }
+    echo "Filtered Salesforce Files for Non-PR: ${salesforceFiles.join(', ')}"
+    return salesforceFiles
+}
 
-            if (salesforceFiles.isEmpty()) {
-                echo "No Salesforce metadata files to deploy."
-		execute=false
-		
-		error "No Salesforce metadata files to deploy."
-                return
-            }
-            }
+def authorizeTargetOrg(branchConfig) {
+    def authCommand = """
+        "C:\\Program Files\\sf\\bin\\sfdx" auth:jwt:grant \
+        --clientid ${branchConfig.clientId} \
+        --jwtkeyfile ${branchConfig.keyFile} \
+        --username ${branchConfig.username} \
+        --instanceurl ${branchConfig.instanceUrl}
+    """
+    def rc = bat(returnStatus: true, script: authCommand)
+    if (rc != 0) {
+        error "Authorization failed for target org."
+    } else {
+        echo "Successfully authorized target org."
+    }
+}
 
+def validateAllTests(config, changedFiles) {
+    validateSalesforcePackage(config, 'RunAllTests', changedFiles)
+}
 
-            
+def validateLocalTests(config, changedFiles) {
+    validateSalesforcePackage(config, 'RunLocalTests', changedFiles)
+}
 
-		if (env.BRANCH_NAME.startsWith('PR') && execute) {
-                echo "isPullRequest"
-                echo "Processing Pull Request for branch: ${env.BRANCH_NAME}"
-		stage('Validate Package') {
-                echo "Validating package.xml"
-                try {
-                    // Run Salesforce CLI validation command
-                    def validateCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy --checkonly -p "${salesforceFiles.join(',')}" --targetusername chandradev1 --testlevel RunSpecifiedTests --runtests "${env.TEST_CLASSES}" --wait 10 --verbose --json
-                    """
-                    def rawOutput = bat(returnStdout: true, script: validateCommand).trim()
-		    echo "Raw output: ${rawOutput}"
-		    // Extract JSON block from rawOutput
-		    def jsonStart = rawOutput.indexOf('{')
-		    def jsonEnd = rawOutput.lastIndexOf('}')
+def validateDefaultTests(config, changedFiles) {
+    validateSalesforcePackage(config, 'Default', changedFiles)
+}
+
+def validateSalesforcePackage(config, testLevel, changedFiles) {
+    def filesToDeploy = changedFiles?.join(',')
+    def validateCommand = """
+        "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy \
+        --checkonly -p ${filesToDeploy} \
+        --targetusername ${config.org} \
+        --testlevel ${testLevel} \
+        --wait 10 --verbose --json
+    """
+    def rc = bat(returnStatus: true, script: validateCommand).trim()
+    def jsonStart = rc.indexOf('{')
+		    def jsonEnd = rc.lastIndexOf('}')
 		    if (jsonStart >= 0 && jsonEnd >= jsonStart) {
-		        def jsonOutput = rawOutput.substring(jsonStart, jsonEnd + 1).trim()
+		        def jsonOutput = rc.substring(jsonStart, jsonEnd + 1).trim()
 			
 		        
 			def serializableData = readJSON text: jsonOutput
@@ -236,7 +281,9 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		            
 			def comment = pullRequest.comment("Validation succeeded. Deployment ID : ${serializableData.result.id}")
 		            echo "Stored Deployment ID: ${serializableData.result.id}"
-			    writeFile(file: "${env.JENKINS_HOME}\\deployment_id.txt", text: "${serializableData.result.id}")
+                    def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+                    writeFile(file: deploymentIdFile, text: "${serializableData.result.id}")
+			    
 			    echo "Deployment ID has been saved to deployment_id.txt and archived."
 		        } else {
 			echo "Validation failed. JSON status: ${serializableData.result.status}, success: ${serializableData.result.success}"
@@ -247,49 +294,70 @@ if (env.BRANCH_NAME.startsWith('PR')) {
 		    } else {
 		        error "Failed to extract JSON from the output."
 		    }
-		    
-                } catch (Exception e) {
-                    error "Validation failed with error: ${e.getMessage()}"
-                }
-            }
-        }
-	    else if (env.BRANCH_NAME == 'main' && execute) {
-	      stage('Deploy and Run Tests') {
-
-                if (isUnix()) {
-                    // Unix/Linux-based command
-                    rc = command "${toolbelt}/sfdx force:mdapi:deploy --wait 10 --deploydir ${DEPLOYDIR} --targetusername chandradev1 --testlevel ${TEST_LEVEL}"
-                } else {
-		    def data = readFile(file: "${env.JENKINS_HOME}\\deployment_id.txt")
-		   
-                    if (data) {
-                    def quickDeployCommand = """
-                    "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy --validateddeployrequestid ${data} --targetusername chandradev1 --wait 10 --verbose
-                    """
-                    def rc = bat(returnStatus: true, script: quickDeployCommand)
-		echo "return code ${rc}"
-                    if (rc == 0) {
-                        echo "Quick deploy succeeded."
-                    } else {
-                        error "Quick deploy failed."
-                    }
-                } else {
-                    error "No Deployment ID available for quick deploy."
-                }
-                }
-	    }
-
-        }
-        
-    }
-    }
+    
 }
-def command(script) {
-    if (isUnix()) {
-        return sh(returnStatus: true, script: script);
+
+def deploySalesforcePackage(config) {
+    def deployCommand = """
+        "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy \
+        --deploydir force-app/main/default \
+        --targetusername ${config.org} \
+        --testlevel RunLocalTests --wait 10
+    """
+    def rc = bat(returnStatus: true, script: deployCommand)
+    if (rc != 0) {
+        error "Deployment failed."
     } else {
-		return bat(returnStatus: true, script: script);
+        echo "Deployment succeeded."
     }
 }
 
+def quickDeploy(deploymentId, config) {
+    def quickDeployCommand = """
+        "C:\\Program Files\\sf\\bin\\sfdx" force:mdapi:deploy \
+        --validateddeployrequestid ${deploymentId} \
+        --targetusername ${config.org} --wait 10
+    """
+    def rc = bat(returnStatus: true, script: quickDeployCommand)
+    return rc == 0
+}
 
+def getPreviousBuildStatus() {
+    def previousBuild = currentBuild.previousBuild
+    return previousBuild ? previousBuild.result : 'SUCCESS'
+}
+
+def RunSpecifiedTests(changedFiles, testClasses, targetBranchConfig) {
+    def testClassList = testClasses.join(',')
+    echo "Running specified tests: ${testClassList}"
+
+    def validateCommand = """
+        "C:\\Program Files\\sf\\bin\\sfdx" force:source:deploy \
+        --checkonly -p ${changedFiles}
+        --targetusername ${targetBranchConfig.org} \
+        --testlevel RunSpecifiedTests \
+        --runtests ${testClassList} \
+        --wait 10 --verbose --json
+    """
+
+    def rc = bat(returnStatus: true, script: validateCommand).trim()
+    def jsonStart = rc.indexOf('{')
+    def jsonEnd = rc.lastIndexOf('}')
+    if (jsonStart >= 0 && jsonEnd >= jsonStart) {
+        def jsonOutput = rc.substring(jsonStart, jsonEnd + 1).trim()
+        def serializableData = readJSON text: jsonOutput
+
+        if (serializableData.result.status == 'Succeeded' && serializableData.result.success == true) {
+            echo "Specified tests succeeded."
+            def deploymentId = serializableData.result.id
+            def deploymentIdFile = "${CONFIG_DIR}\\${env.BRANCH_NAME}_deploymentid.txt"
+            writeFile(file: deploymentIdFile, text: deploymentId)
+            echo "Stored Deployment ID: ${deploymentId} for successful validation."
+        } else {
+            echo "Specified tests failed. JSON status: ${serializableData.result.status}, success: ${serializableData.result.success}"
+            error "Validation failed for specified tests."
+        }
+    } else {
+        error "Failed to extract JSON from the output."
+    }
+}

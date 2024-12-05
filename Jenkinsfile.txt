@@ -8,8 +8,7 @@ properties([
 ])
 
 node {
-	currentBuild.result = 'SUCCESS'
-	return
+	
     stages {
         stage('Cleanup Workspace') {
             steps {
@@ -21,6 +20,7 @@ node {
             steps {
                 script {
                     // Ensure the project directory exists
+                    env.run = true
 					def projectName = env.JOB_NAME.split('/')[0]
                     env.PROJECT_NAME = projectName
 					env.CONFIG_DIR = "${env.JENKINS_HOME}\\workspace\\{env.PROJECT_NAME}"
@@ -44,7 +44,7 @@ node {
                     if(!fileExists(CONFIG_FILE) || !branchConfig){
                         echo "No configuration file found. Exiting build."
                         currentBuild.result = 'SUCCESS'
-			exit 1
+                        env.run = false
                         return
                     }
                 }
@@ -53,6 +53,8 @@ node {
         stage('Checkout Source') {
             steps {
                 script {
+                    if(!env.run)
+                    return
                     def isPR = env.BRANCH_NAME.startsWith('PR')
                     if (isPR) {
                         checkoutPRSource()
@@ -65,6 +67,8 @@ node {
         stage('Process Trigger and Build Logic') {
             steps {
                 script {
+                    if(!env.run)
+                    return
                     def isPR = env.BRANCH_NAME.startsWith('PR')
                     if (isPR) {
                         handlePullRequest(config)
@@ -112,6 +116,7 @@ def handlePullRequest(Config) {
     if (!targetBranchConfig) {
         echo "No config found for target branch: ${targetBranch}. Exiting build."
         currentBuild.result = 'SUCCESS'
+        env.run = false
         return
     }
 
@@ -125,6 +130,7 @@ def handlePullRequest(Config) {
             def prevBuildStatus = getPreviousBuildStatus()
             echo "Exiting with previous build status: ${prevBuildStatus}"
             currentBuild.result = prevBuildStatus
+            env.run = false
             return
         }
         def changedFiles = getChangedFilesPR()
@@ -170,11 +176,6 @@ def handlePullRequest(Config) {
 }
 
 def handleNonPullRequest(branchConfig) {
-    if (!branchConfig) {
-        echo "No configuration found for branch: ${env.BRANCH_NAME}. Exiting build."
-        currentBuild.result = 'SUCCESS'
-        return
-    }
 
     def changedFiles = getChangedFilesNonPR()
     if (changedFiles.isEmpty()) {

@@ -74,7 +74,8 @@ pipeline {
 
 def readProjectConfig(filePath) {
     def jsonContent = readFile(filePath)
-    return readJSON text: jsonContent
+    config = readJSON text: jsonContent
+	return config
 }
 
 def checkoutPRSource() {
